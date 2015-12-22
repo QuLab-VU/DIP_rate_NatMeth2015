@@ -1,4 +1,4 @@
-# R code used to generate Figs 2–6 in Harris et al., Nat Chem Biol 2015
+# R code used to generate Figs 2–6 in Harris et al., Nat Methods 2015
 # primary code written by Darren Tyson
 #
 #
