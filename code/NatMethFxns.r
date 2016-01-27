@@ -6,6 +6,7 @@ require(deSolve)		# ODE solver usedfor generating outputs from 2-state model
 require(gplots)			# needed for colors
 require(grid)
 require(drc)			# for dose-response curves; version 2.5-12
+library(car)			# for linear detailed regression analysis
 
 
 twoStateModel	<-	function(times, states, parameters)
@@ -267,4 +268,211 @@ log2norm <- function(count, ids, norm_type=c('idx','ref')[1],
 		norm
 	}
 
+}
+
+rmsd	<-	function(resid)
+{
+# root-mean-square deviation (RMSD) of an estimator == root-mean-square error (RMSE) 
+# when the estimator is unbiased, RMSD is the square root of variance == standard error
+# RMSD represents the sample standard deviation of the differences between predicted values and observed values.
+# resid == vector or matrix of residuals (difference between the observed and predicted values)
+	sqrt(sum((resid)^2)/length(resid))
+}
+
+
+findDIP	<-	function(dtf,name='unknown',all.models=FALSE, metric=c('opt','ar2','rmse')[1], o=0)
+{
+	if(nrow(dtf)<5 | ncol(dtf)<2)
+	{
+		message('findDIP requires data frame with nrows >= 5 and ncol >= 2')
+		return(NA)
+	}
+
+	x		<-	dtf[,1]
+	y		<-	dtf[,2]
+	n		<-	nrow(dtf)-2
+	
+	m		<-	list()
+	rmse	<-	numeric()
+	ar2		<-	numeric()
+	p		<-	numeric()
+	
+	b		<-	y
+	a		<-	x
+	i		<-	1
+
+	for(i in seq(n))
+	{	
+	# fit a linear model
+		m[[i]]	<-	lm(b ~ a)
+	# root-mean-squared-error of the residuals of the data to the best-fit model
+		rmse	<-	append(rmse,rmsd(m[[i]]$residuals))
+	# adjusted R^2 value of the best-fit model
+		ar2		<-	append(ar2,summary(m[[i]])$adj.r.squared)
+	# p-value
+		p		<-	append(p,summary(m[[i]])$coefficients[2,4])
+	# remove the first element from each vector
+		a		<-	a[-1]
+		b		<-	b[-1]
+	}
+	
+	eval.times	<-	x[seq(n)]
+	# fit a 5th order polynomial to the values of rmse for linear models starting at each time point
+	# simply used as an way to describe how the values of rmse change as starting time points are dropped 
+	rmse.p5		<-	tryCatch({fit_p5(data.frame(x=eval.times,rmse=rmse))},error=function(cond){NA})
+	rmse.p5.coef	<-	tryCatch({coef(rmse.p5$m)},error=function(cond){NA})
+	# first derivative of the best-fit 5th order polynomial is used to estimate when
+	# the change of rmse over time (i.e. the first derivative value at a given time point) approaches zero
+	rmse.p5.1std.coef	<-	tryCatch({rmse.p5$coef.1stderiv},error=function(cond){NA})
+	
+	f	<-	function(...,offset) p5(...) + offset	
+
+
+	# opt is a combined metric for choosing the best linear model using
+	# adjusted R2 value, rmse of the residuals and fraction of the total data points used in model
+	# this weightings of each component of this metric were optimized empirically!
+	opt	<-	ar2 * (1-rmse)^2 * (length(eval.times)-seq(eval.times))^0.25
+	
+	# idx is the index of the time after which all data points are included
+	# for the best fit linear model
+	# three different metrics are provided for identifying this time, adjusted R2 (ar2),
+	# root mean square error of the residuals (rmse) or the opt metric described above
+	idx	<-	switch(metric,
+		# index using best adjusted R2 value within the first 90% of data
+		ar2 = ifelse(n<=5,match(max(ar2),ar2),match(max(ar2[seq(floor(n*.9))]),ar2)),			
+		
+		# index using time at which 1st derivative of rmse becomes 0
+		# offset value used if curve does not cross 0
+		rmse = tryCatch(												
+			{floor(uniroot(f, interval=c(0,72), tol=1e-6, extendInt='upX',
+				offset= o,						
+				int=rmse.p5.1std.coef[1],
+				b1=rmse.p5.1std.coef[2],
+				b2=rmse.p5.1std.coef[3],
+				b3=rmse.p5.1std.coef[4],
+				b4=rmse.p5.1std.coef[5],
+				b5=rmse.p5.1std.coef[6]
+			)$root)},
+			error=function(cond) {
+				message("Could not find root of 1st deriv of RMSE")
+				message(cond)
+            	1
+            }
+        ),
+		opt = match(max(opt),opt)
+	)
+		
+
+	dip	<-	coef(m[[idx]])[2]
+	print(paste('DIP =',dip,'starting at',x[idx],'with',n+2,'data points'))
+	out=list(data=data.frame(Time_h=x,l2=y), model=m, metric.used=metric, n=n, idx=idx, best.model=m[[idx]], opt=opt, 
+		eval.times=x[seq(n)], rmse=rmse,ar2=ar2,p=p,start.time=x[idx],dip=dip, rmse.p5.1std.coef=rmse.p5.1std.coef)
+	if(!all.models)
+	{
+		out[["model"]] <- NULL
+	}
+	return(out)
+}
+
+
+
+# fifth order polynomial
+p5	<-	function(x,int,b1,b2,b3,b4,b5) int+b1*x+b2*x^2+b3*x^3+b4*x^4+b5*x^5
+
+deriv_poly_coef<-function(co) {
+    stopifnot(
+    	all(sapply(names(co), FUN=function(x) x %in% c('int','b1','b2','b3','b4','b5')))
+    )
+    new.co	<-	c(co['b1'],2*co['b2'],3*co['b3'],4*co['b4'],5*co['b5'],0)
+    new.co[is.na(new.co)] <- 0
+    names(new.co)	<-	c('int','b1','b2','b3','b4','b5')
+    new.co
+}
+
+# obtaining best fit parameters of a 5th order polynomial
+# linear model to 5th order polynomial using p5 function defined above
+fit_p5	<-	function(dtf)
+{
+	x		<-	colnames(dtf)[1]
+	y		<-	colnames(dtf)[2]
+	
+	form	<-	formula(paste(y, '~ p5(', x, ', int, b1, b2, b3, b4, b5)'))
+	
+	m.p5	<-	nls(form, data=dtf, start=list(int=1,b1=1,b2=1,b3=1,b4=1,b5=1))
+	m.p5.coef.1stderiv	<-	deriv_poly_coef(coef(m.p5))
+	m.p5.coef.2ndderiv	<-	deriv_poly_coef(m.p5.coef.1stderiv)
+	
+	list(m=m.p5, coef.1stderiv=m.p5.coef.1stderiv, coef.2ndderiv=m.p5.coef.2ndderiv)
+}
+
+f	<-	function(...,offset) p5(...) + offset	
+
+# plotting growth curve and predicted curve of 5th order polynomial fit
+plotGC_DIPfit	<-	function(dtp, tit='unknown', toFile=FALSE, newDev=TRUE, add.line.met='none',...)
+{
+	stuff	<-	list(...)
+	if('o' %in% names(stuff) & tit=='rmse')	tit <- paste(tit,'with o =',stuff[['o']])
+	dip	<-	findDIP(dtp,...)
+	add.line	<-	FALSE
+	if(add.line.met != 'none')	
+	{	
+		add.line	<-	TRUE
+		dip2 <- findDIP(dtp,met=add.line.met)
+	}
+
+	fn	<-	paste(tit,nrow(dtp),'points.pdf')
+	if('metric' %in% names(stuff))	tit <- paste(tit,stuff[['metric']])
+	
+	if(newDev & !toFile)	dev.new(width=7.5, height=3)
+	if(newDev &toFile)	pdf(file=fn, width=7.5, height=3)
+	if(newDev) par(mfrow=c(1,3), oma=c(0,0,1,0))
+
+	plot(dtp, main=NA, xlab=NA, ylab=NA)
+	mtext(side=1, 'Time (h)', font=2, line=2)
+	mtext(side=2, 'log2(cell number)', font=2, line=2)
+	legend("bottomright", c(paste('DIP =',round(dip$dip,4)),paste0('start =',round(dip$start.time,1))), bty='n', pch="")
+	curve(coef(dip$best.model)[1]+coef(dip$best.model)[2]*x,from=0,to=150,add=TRUE, col='red', lwd=3)
+	abline(v=dip$start.time, lty=2)
+	if(add.line)	abline(v=dip2$start.time, lty=3, col='red')
+
+	# plotting graph of adjusted R2
+	plot(dip$eval.times,dip$ar2, ylim=c(0,1), xlab=NA, ylab=NA, main=NA)
+	mtext(side=1, 'Time (h)', font=2, line=2)
+	mtext(side=2, 'adj R2', font=2, line=2)
+	abline(v=dip$start.time, lty=2)
+	if(add.line)	abline(v=dip2$start.time, lty=3, col='red')
+	
+	# plotting graph of RMSE
+	plot(dip$eval.times,dip$rmse, ylim=c(0,0.5), xlab=NA, ylab=NA, main=NA)
+	mtext(side=1, 'Time (h)', font=2, line=2)
+	mtext(side=2, 'RMSE', font=2, line=2)
+	abline(v=dip$start.time, lty=2)
+	if(add.line)	abline(v=dip2$start.time, lty=3, col='red')
+	r1d	<-	coef(fit_p5(data.frame(dip$eval.times,dip$rmse))$m)
+	curve(p5(x,r1d[1],r1d[2],r1d[3],r1d[4],r1d[5],r1d[6]), from=0, to=120, col='blue', lwd=3, add=TRUE)
+
+	if(newDev)	mtext(tit, outer=TRUE, side=3, font=2, line=-1.5)
+	if(newDev & toFile)	dev.off()
+	invisible(dip)
+}
+
+
+f	<-	function(...,offset=0) p5(...) + offset	
+
+getWellRates	<-	function(raw, time.range=c(70,120))
+{
+	timeName	<-	colnames(raw)[grep('[Tt]ime', colnames(raw))]
+	wellName	<-	colnames(raw)[grep('[Ww]ell',colnames(raw))]
+	dateName	<-	colnames(raw)[grep('[Dd]ate',colnames(raw))]
+	if(length(wellName)>1)	wellName	<-	wellName[nchar(wellName)==4]
+	f	<-	formula(paste('nl2 ~ ',timeName,' * ',wellName))
+	m	<-	lm(f, data=raw[raw[,timeName] > time.range[1] & raw[,timeName] < time.range[2],])
+	wells	<-	unique(raw[,wellName])
+	rates	<-	coef(m)[grep(timeName,names(coef(m)))]
+	rates	<-	c(rates[1],rates[-1]+rates[1])
+	cl		<-	unique(raw$cellLine)
+	expt	<-	ifelse(is.null(unique(raw[,dateName])), 'unknown date',unique(raw[,dateName]))
+	out		<-	data.frame(Well=wells, DIP=rates, cellLine=cl, Date=expt)
+	rownames(out)	<-	NULL
+	out
 }

@@ -521,7 +521,7 @@ makeFig5a	<-	function(toFile=FALSE)
 	if(toFile)	dev.off()
 }
 
-makeFig5b	<-	function(toFile=FALSE,fn=paste0('Fig 5b DS345 DIP DRC ',' (',Sys.Date(),')','.pdf'))
+makeFig5b	<-	function(toFile=FALSE,fn=paste0('Fig 5b DS345 DIP DRC ',' (',Sys.Date(),')','.pdf'),pt='average')
 {
 	if(toFile) 
 	{
@@ -542,7 +542,7 @@ makeFig5b	<-	function(toFile=FALSE,fn=paste0('Fig 5b DS345 DIP DRC ',' (',Sys.Da
 	for(cl in c('DS4','DS5','DS3'))
 	{
 		m	<-	drcDIP(dtf=a, cl=cl, drg='erl', PIP.range=c(64.4,140))	
-		plot(m, add=TRUE, pch=NA, lwd=2, col=c('red','orange','green')[match(cl,c('DS4','DS5','DS3'))])
+		plot(m, add=TRUE, pch=NA, lwd=2, col=c('red','orange','green')[match(cl,c('DS4','DS5','DS3'))], type=pt)
 	}
 	abline(h=0, lty=2, col=gray(.2))
 	if(toFile)	dev.off()
@@ -625,11 +625,9 @@ makeFig5e	<-	function(a=brCa_dyn, toFile=FALSE)	{
 			axis(side=2, at=c(seq(-4,6,2)*.01), labels=c(-0.04,-0.02,0,0.02,0.04,NA),cex.axis=1.25)
 		}
 		abline(h=0)
-		abline(h=emax, col='grey', lty=4, lwd=2)
 		abline(v=ec50, col='red', lty=2, lwd=2)
-		text(ec50,-0.01,'EC50 =',pos=2)
-		text(ec50,-0.015,paste(round(ec50*1e9,0),'nM'),pos=2)
-		text(3e-10,emax-0.0005,paste('Emax =',emax),pos=1)
+		text(ec50,-0.01,'EC50 =',pos=2, cex=1.5)
+		text(ec50,-0.015,paste(round(ec50*1e9,0),'nM'),pos=2, cex=1.5)
 	}
 	if(toFile) dev.off()
 }
@@ -649,11 +647,10 @@ makeFig5f	<-	function(a=brCa_static, toFile=FALSE)	{
 		emax	<-	signif(coef(m)['c:(Intercept)'],3)
 		plot(m, type='confidence', add=TRUE)
 		axis(side=1, at=c(1e-11,1e-9,1e-7,1e-5), labels=c(-11,-9,-7,-5), padj=-0.1,cex.axis=1.25)
-		abline(h=emax, col='grey', lty=4, lwd=2)
 		abline(v=ec50, col='red', lty=2, lwd=2)
-		text(ec50,1.15,'EC50 =',pos=4)
-		text(ec50,1.05,paste(round(ec50*1e9,0),'nM'),pos=4)
-		text(1e-10,emax,paste('Emax =',emax),pos=1)
+		abline(h=0)
+		text(ec50,1.15,'EC50 =',pos=4, cex=1.5)
+		text(ec50,1.05,paste(round(ec50*1e9,0),'nM'),pos=4,cex=1.5)
 		lab	<-	sub('bibw2992','afatinib',tolower(tx))
 		mtext(paste('[',lab,'], log10 M', sep=""), side=1, line=2, font=2)
 		if(tx==sort(unique(a$Treatment))[1])
@@ -666,9 +663,10 @@ makeFig5f	<-	function(a=brCa_static, toFile=FALSE)	{
 }
 
 
+
 #########################################################################
 # 						  
-# 							OUTPUT FIGURES
+# 							OUTPUT MAIN FIGURES
 # 						  
 #########################################################################
 
@@ -681,3 +679,148 @@ makeFig5c()
 makeFig5d()
 makeFig5e()
 makeFig5f()
+
+
+#########################################################################
+# 						  
+# 						SUPPLEMENTARY FIGURE 4
+# 						  
+#########################################################################
+
+getWellRates	<-	function(raw, time.range=c(70,120))
+{
+	timeName	<-	colnames(raw)[grep('[Tt]ime', colnames(raw))]
+	wellName	<-	colnames(raw)[grep('[Ww]ell',colnames(raw))]
+	dateName	<-	colnames(raw)[grep('[Dd]ate',colnames(raw))]
+	if(length(wellName)>1)	wellName	<-	wellName[nchar(wellName)==4]
+	f	<-	formula(paste('nl2 ~ ',timeName,' * ',wellName))
+	m	<-	lm(f, data=raw[raw[,timeName] > time.range[1] & raw[,timeName] < time.range[2],])
+	wells	<-	unique(raw[,wellName])
+	rates	<-	coef(m)[grep(timeName,names(coef(m)))]
+	rates	<-	c(rates[1],rates[-1]+rates[1])
+	cl		<-	unique(raw$cellLine)
+	expt	<-	ifelse(is.null(unique(raw[,dateName])), 'unknown date',unique(raw[,dateName]))
+	out		<-	data.frame(Well=wells, DIP=rates, cellLine=cl, Date=expt)
+	rownames(out)	<-	NULL
+	out
+}
+
+makeDensDepGCfig	<-	function(toFile=FALSE)
+{
+	if(!toFile)	dev.new(width=10,height=2.5)
+	if(toFile)	pdf(file='SeedDensGC.pdf', width=10,height=2.5)
+	par(mfrow=c(1,6), oma=c(1,2,0,0), mar=c(3,2,1,0.5), cex=0.75)
+	for(s in unique(p8$Seeding.density))
+	{
+		dtp <- p8[p8$Seeding.density==s,]
+		plot(log2(Cell.count) ~ Time, main=unique(dtp$Seeding.density), data=dtp, xlab=NA,ylab=NA,
+			ylim=c(5,11.5), type='n')
+		for(w in unique(dtp$Well))	lines(dtp[dtp$Well==w,]$Time, log2(dtp[dtp$Well==w,]$Cell.count))
+	}
+	mtext('Time (h)', side=1, font=2, line=-.5, outer=TRUE)
+	mtext('log2(cell number)', side=2, font=2, line=0.5, outer=TRUE)
+	if(toFile)	dev.off()
+}
+
+makeDensDIPfig	<-	function(toFile=FALSE)
+{
+	if(!toFile)	dev.new(width=6, height=3)
+	if(toFile)	pdf(file='SeedDensOnDIP.pdf', width=6, height=3)
+	par(mar=c(4,4,1,1),font.lab=2)
+	plot(DIP ~ Seed.dens.fac, data=p8.rates, ylab="DIP rate, doublings h-1", xlab="Cells per well", ylim=c(0.005,0.02), lab.font=2)
+	if(toFile) dev.off()
+}
+
+makeDensNormfig	<-	function(toFile=FALSE)
+{
+	if(!toFile)	dev.new(width=6, height=3)
+	if(toFile)	pdf(file='SeedDensOnDIP.pdf', width=6, height=3)
+	par(mar=c(4,4,1,1),font.lab=2)
+	plot(norm ~ Seed.dens.fac, data=cn72, ylab="Static response ratio", xlab="Cells per well", ylim=c(0.1,0.4), lab.font=2)
+	if(toFile) dev.off()
+}
+
+
+makeDensDep_nl2Fig	<-	function(toFile=FALSE)
+{
+	if(!toFile)		dev.new(width=4,height=4)
+	if(toFile)	pdf(file='SeedDens_nl2.pdf', width=4,height=4)
+	par(font.lab=2)
+	plot(nl2 ~ Time, data=p8, type='n', ylim=c(-1,2), ylab='Population doublings')
+	for(w in unique(p8$Well)) lines(p8[p8$Well==w,'Time'],p8[p8$Well==w,'nl2'], 
+		col=mycol[match(p8[p8$Well==w,'Seeding.density'],unique(p8$Seeding.density))])
+	legend('bottomright',legend=unique(p8$Seeding.density),lwd=1, col=mycol, cex=0.6, bty='n')
+	if(toFile) dev.off()
+}
+
+
+d	<-	read.csv('../data for figs/CellSeedingData.csv')
+rates <- getWellRates(d, c(70,200))
+
+p8 <- d[d$conc==8,]
+p8.rates <- getWellRates(p8, c(70,200))
+p8.rates$Seeding.density	<-	p8[p8$Time==0,'Seeding.density']
+p8.rates$Seed.dens.fac <- factor(p8.rates$Seeding.density, levels=unique(p8.rates$Seeding.density))
+
+
+mycol	<-	topo.colors(length(unique(d$Seeding.density)))
+
+m <- lm(DIP ~ factor(Seeding.density), data=p8.rates)
+summary(m)
+anova(m)
+
+
+makeDensDepGCfig()
+makeDensDIPfig()
+makeDensDep_nl2Fig()
+
+
+#########################################################################
+# 						  
+# 						SUPPLEMENTARY FIGURES 5 & 6
+# 						  
+#########################################################################
+findDIPgraphs	<-	function(toFile=FALSE, met='ar2',...)
+{
+	m <- list()
+	if(!toFile)	dev.new(width=7, height=9)
+	if(toFile)	pdf(file='findDIPrate.pdf', width=7, height=9)
+	par(mfrow=c(3,3), oma=c(0,1,0,0), mar=c(4,4,1,0.5))
+	for(sl in unique(d$Subline))
+	{
+		dtp <- d[d$Subline==sl,c('Time_h','l2')]
+		m[[sl]] <-	plotGC_DIPfit(dtp=dtp,tit=sl, metric=met, newDev=FALSE, toFile=FALSE,...)
+	}
+	if(toFile)	dev.off()
+	m
+}
+
+subsamp	<-	function(dtf,...)
+{
+	while(nrow(dtf)>=5)
+	{
+		tryCatch({plotGC_DIPfit(dtf,...)},
+			error=function(cond){message=paste('Failed to plot data with',nrow(dtf),'rows')}
+		)
+		dtf <- dtf[seq(1,nrow(dtf),2),]
+	}
+}
+
+makeSamplingFig	<-	function(toFile=FALSE)
+{
+	if(!toFile)	dev.new(width=7,height=12)
+	if(toFile)	pdf(file='Sampling.pdf', width=7,height=12)
+	par(mfrow=c(5,3), mar=c(3.5,3.5,1,1))
+	subsamp(m$DS3$data,metric='ar2',tit='DS3',toFile=FALSE, newDev=FALSE)
+	if(toFile) dev.off()
+}
+
+d		<-	read.csv('../data for figs/DS345 growth curve data.csv', as.is=TRUE)
+d		<- d[d$Subline!='PC9'& d$Time_h<=120,]
+
+
+m	<-	findDIPgraphs(met='rmse',o=0.001,add.line.met='ar2')
+
+makeSamplingFig()
+
+
