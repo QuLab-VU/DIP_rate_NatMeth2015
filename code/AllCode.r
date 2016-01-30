@@ -731,16 +731,6 @@ makeDensDIPfig	<-	function(toFile=FALSE)
 	if(toFile) dev.off()
 }
 
-makeDensNormfig	<-	function(toFile=FALSE)
-{
-	if(!toFile)	dev.new(width=6, height=3)
-	if(toFile)	pdf(file='SeedDensOnDIP.pdf', width=6, height=3)
-	par(mar=c(4,4,1,1),font.lab=2)
-	plot(norm ~ Seed.dens.fac, data=cn72, ylab="Static response ratio", xlab="Cells per well", ylim=c(0.1,0.4), lab.font=2)
-	if(toFile) dev.off()
-}
-
-
 makeDensDep_nl2Fig	<-	function(toFile=FALSE)
 {
 	if(!toFile)		dev.new(width=4,height=4)
@@ -774,10 +764,13 @@ makeDensDepGCfig()
 makeDensDIPfig()
 makeDensDep_nl2Fig()
 
+leveneTest(lm(DIP ~ Seed.dens.fac, data=p8.rates))
+
+
 
 #########################################################################
 # 						  
-# 						SUPPLEMENTARY FIGURES 5 & 6
+# 						SUPPLEMENTARY FIGURES 3, 4 & 7
 # 						  
 #########################################################################
 findDIPgraphs	<-	function(toFile=FALSE, met='ar2',...)
