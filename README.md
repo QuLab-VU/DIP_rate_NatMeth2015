@@ -9,9 +9,9 @@ Also included in this repository is all necessary data in comma-separated value 
 
 To generate all figures, R must be in the directory in which this README file is found.
 
-At the R command line prompt  simply type:
-...
-source(\'\.\\code\\AllCode.R\')
-...
+Assuming you have all the required libraries installed, at the R command line prompt simply type:
+```
+source(".\code\AllCode.R")
+```
 
 
