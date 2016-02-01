@@ -639,7 +639,7 @@ makeFig5f	<-	function(a=brCa_static, toFile=FALSE)	{
 	for(tx in sort(unique(a$Treatment)))	{
 		dtp	<-	a[a$Treatment==tx,]
 		plot(	0, type='n', 
-				xlim=c(1e-11,1e-4), ylim=c(0,1.2), log='x',
+				xlim=c(1e-11,1e-5), ylim=c(0,1.2), log='x',
 				xlab=NA, ylab=NA, xaxt='n', yaxt='n')
 		points(dtp$Conc,dtp$respRatio)
 		m	<-	drm(respRatio ~ Conc, data=dtp, fct=LL.4())
