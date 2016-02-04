@@ -364,9 +364,11 @@ findDIP	<-	function(dtf,name='unknown',all.models=FALSE, metric=c('opt','ar2','r
 		
 
 	dip	<-	coef(m[[idx]])[2]
-	print(paste('DIP =',dip,'starting at',x[idx],'with',n+2,'data points'))
+	ci	<-	diff(confint(m[[idx]])[2,])/2
+	names(ci)	<-	'±'
+	print(paste('DIP =',round(dip,4),'starting at',round(x[idx],2),'with',n+2,'data points'))
 	out=list(data=data.frame(Time_h=x,l2=y), model=m, metric.used=metric, n=n, idx=idx, best.model=m[[idx]], opt=opt, 
-		eval.times=x[seq(n)], rmse=rmse,ar2=ar2,p=p,start.time=x[idx],dip=dip, rmse.p5.1std.coef=rmse.p5.1std.coef)
+		eval.times=x[seq(n)], rmse=rmse,ar2=ar2,p=p,start.time=x[idx],dip=dip, dip.95ci=ci, rmse.p5.1std.coef=rmse.p5.1std.coef)
 	if(!all.models)
 	{
 		out[["model"]] <- NULL
@@ -430,8 +432,16 @@ plotGC_DIPfit	<-	function(dtp, tit='unknown', toFile=FALSE, newDev=TRUE, add.lin
 	plot(dtp, main=NA, xlab=NA, ylab=NA)
 	mtext(side=1, 'Time (h)', font=2, line=2)
 	mtext(side=2, 'log2(cell number)', font=2, line=2)
-	legend("bottomright", c(paste('DIP =',round(dip$dip,4)),paste0('start =',round(dip$start.time,1))), bty='n', pch="")
+	dip.val	<-	round(dip$dip,4)
+	dip.95conf	<-	round(abs(dip.val-confint(dip$best.model)[2,1]),5)
+	legend("bottomright", c(paste('DIP =',dip.val),paste0('  ±',dip.95conf),paste0('start =',round(dip$start.time,1))), bty='n', pch="")
 	curve(coef(dip$best.model)[1]+coef(dip$best.model)[2]*x,from=0,to=150,add=TRUE, col='red', lwd=3)
+	
+	try(polygon(	x=c(dip$start.time, 150, 150),
+		y=c(coef(dip$best.model)[1]+coef(dip$best.model)[2]*dip$start.time,
+		coef(dip$best.model)[1]+confint(dip$best.model)[2,1]*150,
+		coef(dip$best.model)[1]+confint(dip$best.model)[2,2]*150), col=adjustcolor("gray",alpha.f=0.4), density=NA))
+	
 	abline(v=dip$start.time, lty=2)
 	if(add.line)	abline(v=dip2$start.time, lty=3, col='red')
 

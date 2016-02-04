@@ -790,13 +790,19 @@ findDIPgraphs	<-	function(toFile=FALSE, met='ar2',...)
 
 subsamp	<-	function(dtf,...)
 {
+	out	<-	list()
 	while(nrow(dtf)>=5)
 	{
-		tryCatch({plotGC_DIPfit(dtf,...)},
-			error=function(cond){message=paste('Failed to plot data with',nrow(dtf),'rows')}
+		out[[nrow(dtf)+1]]	<-	tryCatch({plotGC_DIPfit(dtf,...)},
+			error=function(cond){
+				message=paste('Failed to plot data with',nrow(dtf),'rows')
+				return(NA)
+			}
 		)
 		dtf <- dtf[seq(1,nrow(dtf),2),]
 	}
+	
+	invisible(out[!is.na(out)])
 }
 
 makeSamplingFig	<-	function(toFile=FALSE)
@@ -804,8 +810,9 @@ makeSamplingFig	<-	function(toFile=FALSE)
 	if(!toFile)	dev.new(width=7,height=12)
 	if(toFile)	pdf(file='Sampling.pdf', width=7,height=12)
 	par(mfrow=c(5,3), mar=c(3.5,3.5,1,1))
-	subsamp(m$DS3$data,metric='ar2',tit='DS3',toFile=FALSE, newDev=FALSE)
+	out <- subsamp(m$DS3$data,metric='ar2',tit='DS3',toFile=FALSE, newDev=FALSE)
 	if(toFile) dev.off()
+	invisible(out)
 }
 
 d		<-	read.csv('../data for figs/DS345 growth curve data.csv', as.is=TRUE)
@@ -814,6 +821,6 @@ d		<- d[d$Subline!='PC9'& d$Time_h<=120,]
 
 m	<-	findDIPgraphs(met='rmse',o=0.001,add.line.met='ar2')
 
-makeSamplingFig()
+m2	<-	makeSamplingFig()
 
 
