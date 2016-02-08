@@ -206,27 +206,7 @@ getDRM	<-	function(dat=PC9)
 # Function to extract DIP rate across multiple condititons 
 # and calculate a 4-param logistic fit
 
-drcDIP	<-	function(dtf,cl=cl,drg=drg,PIP.range=PIP.range,norm=T)
-{	
-	rates	<-	data.frame(cellLine=character(), conc=integer(),
-		DIPrate=numeric(),drug=character())
-	dtp		<-	dtf[dtf$cellLine==cl & dtf$drug==drg,]
-	Uconc	<-	unique(dtp$conc)
-	for(co in 2:length(Uconc))
-	{
-		rates	<-	rbind(rates, 
-			data.frame(cellLine=cl,conc=Uconc[co],
-			DIPrate=getDIP(dtp[dtp$conc==Uconc[co] & dtp$time>=PIP.range[1] & dtp$time<=PIP.range[2],]),drug=drg))
-	}
-	rates$normDIP	<-	rates$DIPrate/rates[rates$conc==min(rates$conc),'DIPrate']
-	if(norm)
-	{	
-		drm(normDIP~conc,data=rates,fct=LL.4())
-	} else
-	{
-		drm(DIPrate~conc,data=rates,fct=LL.4())	
-	}
-}
+
 
 log2norm <- function(count, ids, norm_type=c('idx','ref')[1], 
 	norm_id="0", norm_vals, norm_idx=1, zero=log2(0.999))
@@ -280,7 +260,7 @@ rmsd	<-	function(resid)
 }
 
 
-findDIP	<-	function(dtf,name='unknown',all.models=FALSE, metric=c('opt','ar2','rmse')[1], o=0)
+findDIP	<-	function(dtf,name='unknown',all.models=FALSE, metric=c('opt','ar2','rmse')[1], o=0, dat.type='cell.counts')
 {
 	if(nrow(dtf)<5 | ncol(dtf)<2)
 	{
@@ -289,7 +269,7 @@ findDIP	<-	function(dtf,name='unknown',all.models=FALSE, metric=c('opt','ar2','r
 	}
 
 	x		<-	dtf[,1]
-	y		<-	dtf[,2]
+	if(dat.type=='cell.counts')	{y <- log2(dtf[,2])} else {y <- dtf[,2]}
 	n		<-	nrow(dtf)-2
 	
 	m		<-	list()
@@ -377,7 +357,6 @@ findDIP	<-	function(dtf,name='unknown',all.models=FALSE, metric=c('opt','ar2','r
 }
 
 
-
 # fifth order polynomial
 p5	<-	function(x,int,b1,b2,b3,b4,b5) int+b1*x+b2*x^2+b3*x^3+b4*x^4+b5*x^5
 
@@ -406,8 +385,6 @@ fit_p5	<-	function(dtf)
 	
 	list(m=m.p5, coef.1stderiv=m.p5.coef.1stderiv, coef.2ndderiv=m.p5.coef.2ndderiv)
 }
-
-f	<-	function(...,offset) p5(...) + offset	
 
 # plotting growth curve and predicted curve of 5th order polynomial fit
 plotGC_DIPfit	<-	function(dtp, tit='unknown', toFile=FALSE, newDev=TRUE, add.line.met='none',...)
@@ -467,16 +444,14 @@ plotGC_DIPfit	<-	function(dtp, tit='unknown', toFile=FALSE, newDev=TRUE, add.lin
 }
 
 
-f	<-	function(...,offset=0) p5(...) + offset	
-
 getWellRates	<-	function(raw, time.range=c(70,120))
 {
 	timeName	<-	colnames(raw)[grep('[Tt]ime', colnames(raw))]
 	wellName	<-	colnames(raw)[grep('[Ww]ell',colnames(raw))]
 	dateName	<-	colnames(raw)[grep('[Dd]ate',colnames(raw))]
 	if(length(wellName)>1)	wellName	<-	wellName[nchar(wellName)==4]
-	f	<-	formula(paste('nl2 ~ ',timeName,' * ',wellName))
-	m	<-	lm(f, data=raw[raw[,timeName] > time.range[1] & raw[,timeName] < time.range[2],])
+	form	<-	formula(paste('nl2 ~ ',timeName,' * ',wellName))
+	m	<-	lm(form, data=raw[raw[,timeName] > time.range[1] & raw[,timeName] < time.range[2],])
 	wells	<-	unique(raw[,wellName])
 	rates	<-	coef(m)[grep(timeName,names(coef(m)))]
 	rates	<-	c(rates[1],rates[-1]+rates[1])

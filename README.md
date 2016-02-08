@@ -11,7 +11,16 @@ To generate all figures, R must be in the directory in which this README file is
 
 Assuming you have all the required libraries installed, at the R command line prompt simply type:
 ```
-source(".\code\AllCode.R")
+source("./code for figs/codeForFigs.R",chdir=TRUE)
 ```
+
+
+To see an example of how the `dipDRC` function takes raw cell count data, 
+estimates DIP rates and produces dose-response curves, at the R command line prompt
+type:
+```
+source("./example dipDRC/makeDRCexample.R",chdir=TRUE)
+```
+
 
 

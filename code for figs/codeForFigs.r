@@ -523,6 +523,22 @@ makeFig5a	<-	function(toFile=FALSE)
 
 makeFig5b	<-	function(toFile=FALSE,fn=paste0('Fig 5b DS345 DIP DRC ',' (',Sys.Date(),')','.pdf'),pt='average')
 {
+	drcDIPmod	<-	function(dtf,cl,drg='erl',DIP.range=c(64.4,140), norm=T)
+	{	
+		rates	<-	data.frame(cellLine=character(), conc=integer(),
+			DIPrate=numeric(),drug=character())
+		dtp		<-	dtf[dtf$cellLine==cl & dtf$drug==drg,]
+		Uconc	<-	unique(dtp$conc)
+		DIPrate	<-	getDIP(dtp[dtp$rel.time>=DIP.range[1] & dtp$rel.time<=DIP.range[2],],concName='conc')
+		if(norm)
+		{	
+			drm(DIPrate/DIPrate[1]~Uconc,fct=LL.4())
+		} else
+		{
+			drm(DIPrate~Uconc,fct=LL.4())
+		}
+	}
+	
 	if(toFile) 
 	{
 		pdf(file=fn,width=3,height=3)
@@ -534,14 +550,14 @@ makeFig5b	<-	function(toFile=FALSE,fn=paste0('Fig 5b DS345 DIP DRC ',' (',Sys.Da
 	mtext('[erlotinib], log10 M', side=1, font=2, line=2)
 	mtext('DIP rate', side=2, font=2, line=3)
 	mtext('response ratio', side=2, font=2, line=2)
-	a	<-	aggregate(DS345_erlDR[,'Cell.count'], by=list(time=DS345_erlDR$Time_h, cellLine=DS345_erlDR$Subline, conc=DS345_erlDR$conc), FUN=sum)
+	a	<-	aggregate(DS345_erlDR[,'Cell.count'], by=list(rel.time=DS345_erlDR$Time_h, cellLine=DS345_erlDR$Subline, conc=DS345_erlDR$conc), FUN=sum)
 	a$ID	<-	paste(a$cellLine,a$conc,sep='_')
 	a$nl2	<-	log2norm(a$x, a$ID)
 	a$drug	<-	'erl'
 	a$conc	<-	a$conc*1e-6
 	for(cl in c('DS4','DS5','DS3'))
 	{
-		m	<-	drcDIP(dtf=a, cl=cl, drg='erl', PIP.range=c(64.4,140))	
+		m	<-	drcDIPmod(dtf=a, cl=cl)	
 		plot(m, add=TRUE, pch=NA, lwd=2, col=c('red','orange','green')[match(cl,c('DS4','DS5','DS3'))], type=pt)
 	}
 	abline(h=0, lty=2, col=gray(.2))
@@ -574,7 +590,7 @@ makeFig5c	<-	function(toFile=FALSE)
 	if(toFile)	dev.off()
 }
 
-makeFig5d	<-	function(myData=maxConcData[maxConcData$Time >= 48,], toFile=FALSE, xl=c(48,144), yl=c(0,2))	{
+makeFig5d	<-	function(myData=maxConcData, toFile=FALSE, xl=c(0,144), yl=c(0,4))	{
 	if(!toFile)	dev.new(width=3, height=3)
 	if(toFile)	pdf(file='HCC1954 max drug growth curves.pdf', width=3, height=3)
 	par(font.lab=2, cex.lab=1.2, mar=c(3,3,1,1))
@@ -591,8 +607,8 @@ makeFig5d	<-	function(myData=maxConcData[maxConcData$Time >= 48,], toFile=FALSE,
 	for(tx in unique(myData$Treatment))	{
 		dtp	<-	myData[myData$Treatment==tx,]
 		lines(dtp$Time,dtp$nl2-dtp$nl2[1], lwd=3, col=c('black','blue','green','red')[match(tx, unique(myData$Treatment))])
-		lab	<-	c('control','afatinib','lapatinib','erlotinib')[match(tx,unique(myData$Treatment))]
-		text(	96, dtp[dtp$Time==96,]$nl2-dtp[dtp$Time==48,]$nl2, 
+		lab	<-	c('control','afatinib','erlotinib','lapatinib')[match(tx,unique(myData$Treatment))]
+		text(	96, dtp[dtp$Time==96,]$nl2, 
 				lab, pos=4, cex=0.85)
 		DIP	<-	round(coef(lm(nl2 ~ Time, data=dtp))['Time'],4)
 	}
@@ -663,6 +679,320 @@ makeFig5f	<-	function(a=brCa_static, toFile=FALSE)	{
 }
 
 
+#########################################################################
+# 						  
+# 					FIGURE 6 and SUPP FIG 6a & 6b
+# 						  
+#########################################################################
+
+## FUNCTIONS
+
+getDIP		<-	function(dtf, yName='nl2', timeName='rel.time', concName='Conc', after=48)
+{
+	dfd			<-	dtf[dtf[,timeName] >= after,]
+	conc		<-	unique(dtf[,concName])
+	f			<-	formula(paste(yName,'~',timeName,'* factor(',concName,')'))
+	myMod		<-	lm(f, data=dfd, na.action=na.omit)
+	dipRates	<-	coef(myMod)
+	dipRates	<-	dipRates[grep(timeName,names(dipRates))]
+	dipRates	<-	c(dipRates[1],dipRates[-1]+dipRates[1])
+	names(dipRates)	<-	conc
+	dipRates
+}
+
+
+myll4	<-	function(x,b,c,d,e)
+{
+#                           d - c           
+# f(x)  =  c  +  ---------------------------
+#                1 + exp(b(log(x) - log(e)))
+#	b: Hill coefficient
+#	c: lower limit (Emax)
+#	d: upper limit (Emin)
+#	e: EC50 (not log scaled)
+	c + ( (d - c) / (1 + exp(b*(log(x) - log(e)))))
+}
+
+myll5	<-	function(x,b,c,d,e,f)
+{
+#                           d - c           
+# f(x)  =  c  +  ---------------------------
+#                1 + exp(b(log(x) - log(e)))
+#	b: Hill coefficient
+#	c: lower limit (Emax)
+#	d: upper limit (Emin)
+#	e: EC50 (not log scaled)
+#	f: shape parameter
+	c + ( (d - c) / ((1 + exp(b*(log(x) - log(e)))))^f)
+}
+
+
+prepSangerDRC	<-	function(ll5.param=sData[1,])
+{
+	# sangerDRC parameters
+	# ic_50_est			==		NOT A FIT PARAMETER. CALCULATED FROM BEST-FIT MODEL
+	# alpha_est			== 		f: shape parameter
+	# beta_est			== 		b: Hill coeff
+	# i_0_est			== 		c: lower; control cells intens (no drug)
+	# i_max_est			== 		d: upper; blank val; no cells intens
+	# e_est				==		e: EC50, base e
+
+	colnames(ll5.param)[colnames(ll5.param)=='alpha_est']		<-	'shape'
+	colnames(ll5.param)[colnames(ll5.param)=='beta_est']		<-	'Hill'
+	colnames(ll5.param)[colnames(ll5.param)=='i_0_est']			<-	'lower'
+	colnames(ll5.param)[colnames(ll5.param)=='i_max_est']		<-	'upper'
+	ll5.param[colnames(ll5.param)=='ic_50_est']					<-	exp(ll5.param['ic_50_est']) * 1e-6		# convert from natural log µM to M
+	colnames(ll5.param)[colnames(ll5.param)=='ic_50_est']		<-	'IC50'
+	colnames(ll5.param)[colnames(ll5.param)=='e_est']			<-	'EC50'
+	ll5.param$EC50			<-	exp(ll5.param$EC50) * 1e-6		# convert from natural log µM to M
+	ll5.param		<-	ll5.param[,c('Hill','lower','upper','EC50','shape')]
+	names(ll5.param)	<-	letters[2:6]
+	as.list(ll5.param)
+}
+
+convertLL5toLL4	<-	function(ll5.param=prepSangerDRC(), out='param')
+{
+	x			<-	10^(seq(-11,-4,0.1))
+	temp		<-	data.frame(drug.conc=x,intensity=do.call(myll5, args=append(list(x=x),ll5.param), env=.GlobalEnv))
+	m			<-	drm(intensity ~ drug.conc, data=temp, fct=LL.4())
+	ll4.param	<-	as.list(coef(m))
+	names(ll4.param)	<-	letters[2:5]
+	if(out!='param') {ret	<-	m} else {ret	<-	ll4.param}
+	ret
+}
+
+getDRMfromCCLE	<-	function(raw.data.row)	{
+	d	<-	tData(raw.data.row)
+	d$y	<-	(100+d$resp) / 100
+	d$x	<-	d$conc*1e-6			# Molar concentration
+	drm(y ~ x, data=d, fct=LL.4())	
+}
+
+inCCLE	<-	function(cl.name)	any(grepl(cl.name,ccle.raw$CCLE.Cell.Line.Name))
+
+tData		<-	function(myData)	
+{
+# function for extracting data from raw GDSC (Sanger) data
+	if(class(myData)!="data.frame" | nrow(myData)!=1)
+	{
+		cat('Data sent to tData function must be a data.frame with one row\n')
+		break
+	}
+	cellLine	<-	myData$Primary.Cell.Line.Name[1]
+	drug		<-	myData$Compound[1]
+	doses		<-	as.numeric(unlist(strsplit(myData$Doses..uM., '\\,')))
+	act			<-	as.numeric(unlist(strsplit(myData$Activity.Data..median., '\\,')))
+	SD			<-	as.numeric(unlist(strsplit(myData$Activity.SD, '\\,')))
+	len			<-	length(doses)
+	EC50		<-	myData$EC50..uM.
+	IC50		<-	myData$IC50..uM.
+	Amax		<-	myData$Amax
+	ActArea		<-	myData$ActArea
+	out			<-	data.frame(	cellLine=rep(cellLine,len),
+		drug=rep(drug,len),
+		conc=doses,
+		resp=act,
+		SD=SD,
+		EC50=rep(EC50,len),
+		IC50=rep(IC50,len),
+		Amax=rep(Amax,len),
+		ActArea=rep(ActArea,len)
+	)
+	out
+}
+
+getAA	<-	function(drmod, max=1)
+{
+	# drmod is dose–response model (drm)
+	# normalizing to 0 as maximum level by subtracting max from all values
+	# rescaling total possible area by dividing by the number of measurements
+	# This approach is equivalent to that used by Barretina et al.
+	# See doi:10.1038/nature11735
+	myargs			<-	as.list(coef(drmod))
+	names(myargs)	<-	c('b','c','d','e')
+	vals	<-	do.call(myll4, args=append(list(x=drug.conc),myargs))-max
+	-sum(vals) / length(vals)
+}
+
+
+makeSuppFig6a	<-	function(toFile=FALSE,nc=5,nr=2,plot.scale=1, cellLines=unique(mel$cellLine))
+{
+	fn	<-	'../R-generated figs/mel GC.pdf'
+
+	cln			<-	unique(mel$cellLine)
+	timeCols	<-	topo.colors(120)
+	drug.conc	<-	unique(mel$Conc)
+	drugCols	<-	colorpanel(n=length(drug.conc),low='blue',mid=grey(0.5),high='red')
+	if(!toFile)	dev.new(width=nc*1.5*plot.scale,height=nr*2.5*plot.scale)
+	if(toFile)	pdf(file=fn, width=nc*1.5*plot.scale,height=nr*2.5*plot.scale)
+	par(mfrow=c(nr,nc), mar=c(4,2,1,1), oma=c(3,2,3,0))
+	for(cl in cellLines)
+	{
+		dtp			<-	mel[mel$cellLine==cl,]
+		if('1110' %in% rownames(dtp)) dtp	<-	dtp[rownames(dtp)!='1110',]
+		a	<-	aggregate(nl2 ~ rel.time + Conc, data=dtp, mean)
+		plot(a$rel.time, a$nl2, ylim=c(-0.5,5), type='n', xaxt='n', yaxt='n', xlab=NA, ylab=NA)
+		abline(h=0, lwd=1.5, lty=2, col=grey(.5))
+		for(co in unique(a$Conc))	lines(a[a$Conc==co,'rel.time'],a[a$Conc==co,'nl2'], col=drugCols[match(co,drug.conc)], lwd=2)
+		if((match(cl,cellLines)-1)/nr > nr | nr==1)		{
+			axis(side=1, at=0:5*24, padj=-.5)
+		} else	axis(side=1, at=0:5*24, padj=-.5, labels=NA)
+
+		if(match(cl,cellLines)%%nc==1)
+		{
+			axis(side=2, at=0:5, padj=.5)
+		} else 	axis(side=2, at=0:5, labels=NA, padj=.5)
+		mtext(cl, font=2, line=0.5, side=3)
+	}
+	mtext('Time (h)', font=2, line=-1, side=1, outer=TRUE)
+	mtext('Population doublings', font=2, line=0, side=2, outer=TRUE)
+	li	<- as.raster(matrix(drugCols, nrow=1))
+	grid.raster(x=0.51, y=0.03, li, height=.015/(nc/5), width=.1/(nr/2), just=c('center','top'), interpolate=FALSE)
+	mtext(paste(c(0,-7,-6,-5),collapse="      "), outer=TRUE, side=1, line=0.5, cex=0.75)
+	if(toFile) dev.off()
+}
+
+makeSuppFig6b	<-	function(toFile=FALSE, model.out=TRUE, addCCLE=FALSE, cellLines=unique(mel$cellLine),
+	nr=1, nc=4, plot.scale=1)
+{
+	m.dyn		<-	list()
+	m.dyn.norm	<-	list()
+	params		<-	data.frame()
+	ifelse(addCCLE, 
+		fn <- '../R-generated figs/Mel DIP rate DRC w CCLE.pdf',
+		fn <- '../R-generated figs/Mel DIP rate DRC.pdf')
+	if(!toFile)	dev.new(width=nc*1.5*plot.scale,height=nr*2.5*plot.scale)
+	if(toFile)	pdf(file=fn, width=nc*1.5*plot.scale,height=nr*2.5*plot.scale)
+	par(mfrow=c(nr,nc), mar=c(4,2,1,1), oma=c(3,2,3,0))
+	for(cl in cellLines)
+	{
+		dtp	<-	mel[mel$cellLine==cl,]
+
+		conc		<-	unique(dtp$Conc)
+		dip			<-	getDIP(dtp)
+		resp.ratio	<-	dip/dip['0']
+		ec50		<-	numeric()
+		ic50		<-	numeric()
+		aa			<-	numeric()
+		m.dyn[[cl]]	<-	drm(dip ~ conc, fct=LL.4(), na.action='na.omit')
+		m.dyn.norm[[cl]]	<-	drm(resp.ratio ~ conc, fct=LL.4(), na.action='na.omit')
+		plot(m.dyn.norm[[cl]], type='none', ylim=c(-0.5,1.25), 
+			xtlab=c(0,-7,-6,-5), xlab=NA, ylab=NA, lwd=2, axes=FALSE)			
+		axis(side=1, at=c(0,1e-7,1e-6,1e-5),labels=FALSE, padj=-.5)
+		axis(side=2, at=seq(from=-0.5, to=1, by=0.5), labels=FALSE, padj=.5)
+		if(match(cl,cellLines)%%nc==1)
+		{
+			mtext('Response ratio', font=2, line=2.5, side=2, cex=plot.scale)
+			axis(side=2, at=seq(from=-0.5, to=1, by=0.5), tick=FALSE, padj=.5)
+		}
+		if((match(cl,cellLines)-1)/nr > nr | nr==1)	axis(side=1, at=c(0,1e-7,1e-6,1e-5),labels=c(0,-7,-6,-5),tick=FALSE, padj=-.5)
+
+		mtext(cl, font=2, line=0.5, side=3, cex=plot.scale)
+		abline(h=0, lwd=1.5, lty=2, col=grey(.5))
+		for(ti in unique(dtp$rel.time)[-1])
+		{
+			dfsdrc	<-	dtp[dtp$rel.time==ti,]
+			if(length(unique(dfsdrc$Conc)) <= 2) next
+			ctrl	<-	mean(dfsdrc[dfsdrc$Conc==0,'cell.count'])
+			resp.ratio	<-	dfsdrc$cell.count/ctrl
+			m	<-	drm(resp.ratio ~ dfsdrc$Conc, fct=LL.4())
+			plot(m, add=TRUE, type='none', col=timeCols[ti], lwd=2)
+			ec50	<-	append(ec50,coef(m)['e:(Intercept)'])
+			# suppress errors in obtaining IC50 values when response is insufficient to achieve
+			ic50	<-	append(ic50,tryCatch({ED(m,0.5,'delta',type="absolute", display=FALSE)[1]},warning=function(cond){return(NA)}))
+			aa		<-	append(aa,getAA(m))
+		}
+		plot(m.dyn.norm[[cl]], type='none', lwd=2, add=TRUE)			# 
+		if(inCCLE(cl) & addCCLE)
+		{
+			m2	<-	getDRMfromCCLE(ccle.raw[grepl(cl,ccle.raw$CCLE.Cell.Line.Name),])
+			plot(m2, add=TRUE, col='red',lwd=2)
+		}
+		times	<-	unique(dtp$rel.time)[-1]
+		params	<-	rbind(params,data.frame(rel.time=times,EC50=ec50,IC50=ic50,AA=aa,cellLine=cl))
+	}
+	mtext('[drug], log10 M', font=2, line=-2/nr, side=1, outer=TRUE, cex=plot.scale)
+	li2 <- as.raster(matrix(timeCols[12:120], nrow=1))
+	grid.raster(x=0.5, y=0.07/(nr/2), li2, height=.015, width=.125, just=c('center','top'))
+	mtext(side=1, paste(seq(24,120,24),collapse="  "), cex=.75*nc/5, outer=TRUE, line=1)
+	if(addCCLE) mtext('red = CCLE',side=1,outer=TRUE,adj=0,font=2)
+	if(toFile)	dev.off()
+	if(model.out)	list(dyn=m.dyn,dyn.norm=m.dyn.norm,param=params)
+}
+
+
+makeFig6	<-	function(toFile=FALSE, bias='IC50', after=48)
+{
+	if(!toFile)	dev.new(width=6,height=2.5)
+	if(toFile)	pdf(file='../Melanoma + BRAFi time bias.pdf',width=6,height=2.5)
+	par(mfrow=c(1,4), mar=c(4,2,1,1), oma=c(0,2,3,0))
+	cln			<-	unique(mel$cellLine)
+	timeCols	<-	topo.colors(120)
+	drug.conc	<-	unique(mel$Conc)
+	drugCols	<-	colorpanel(n=length(drug.conc),low='blue',mid=grey(0.5),high='red')
+
+	for(cl in cln)
+	{
+		# Time bias on EC50
+		plot(1, 1e-8, xlim=c(0,120), ylim=c(1e-8,1e-4), type='n', xlab=NA, ylab=NA, log='y', xaxt='n', yaxt='n')
+		stable.range	<-	seq(after,tail(drcm$param[drcm$param$cellLine==cl,'rel.time'],1))
+		points(drcm$param[drcm$param$cellLine==cl,'rel.time'], drcm$param[drcm$param$cellLine==cl,bias], 
+			col=timeCols[drcm$param[drcm$param$cellLine==cl,'rel.time']], pch=19, cex=2)
+		if(cl %in% ccle$cellLine)	points(72,ccle[ccle$cellLine==cl,bias]*1e-6,pch=8, cex=1.5)
+		if(cl %in% sData$cell_line_name)	points(72,sData[sData$cell_line_name==cl,bias],pch=12, cex=1.5)
+		axis(side=1, at=c(0:5)*24, padj=-.5)
+		ifelse(cl == 'A2058',
+			axis(side=2, at=10^(-8:-4), labels=c(-8:-4), padj=.5),
+			axis(side=2, at=10^(-8:-4), labels=FALSE, padj=.5))
+		if(cl == 'A2058')
+		{
+			legend('bottomleft',c('DIP','static','CCLE','GDSC'),pch=c(95,19,8,12), col=c('black',timeCols[48],'black','black'), bty='n',border='n')
+			mtext(side=2,'PLX4720 IC50, log10 M', line=2, font=2)
+		}
+		ic50	<-	ED(drcm$dyn.norm[[cl]],0.5,'delta',type="absolute", display=FALSE)[1]
+
+		points(after,signif(ic50,3), pch=2, cex=1.5)
+		points(stable.range[-1],rep(signif(ic50,3), length(stable.range[-1])), pch=3, cex=.25)
+
+		mtext(cl, font=2, line=0.5, side=3)
+	}
+	mtext(side=1,'Time (h)', line=-1.5, font=2, cex=1, outer=TRUE)
+	if(toFile)	dev.off()
+}
+
+## END FUNCTIONS
+
+## LOAD DATA
+
+
+mel	<-	read.csv('../data for figs/mel+plx time course.csv')
+
+# Data downloaded from CCLE: Raw data dose-response data generated by the GDSCP used to obtain model fits
+# http://www.broadinstitute.org/ccle/downloadFile/DefaultSystemRoot/exp_10/ds_27/CCLE_NP24.2009_Drug_data_2015.02.24.csv?downloadff=true&fileId=20777
+# Data for PLX4720-treated melanoma cell lines was saved in separate file, maintaining exact data structure
+ccle.raw	<-	read.csv('../data for figs/CCLE raw data (skin+PLX4720).csv', as.is=TRUE)
+
+# Data downloaded from CCLE: Dose-response curve parameters generated by the GDSCP
+# http://www.broadinstitute.org/ccle/downloadFile/DefaultSystemRoot/exp_10/ds_27/CCLE_GNF_data_090613.xls?downloadff=true&fileId=13199
+# Data for PLX4720-treated melanoma cell lines was saved in separate file, maintaining exact data structure
+ccle		<-	read.csv('../data for figs/BRAF mut DRC param from CCLE.csv', as.is=TRUE)
+ccle$cellLine	<-	gsub('-','',ccle$cellLine)
+
+# Data downloaded from GDSCP: 
+# ftp://ftp.sanger.ac.uk/pub/project/cancerrxgene/releases/release-5.0/gdsc_drug_sensitivity_fitted_data_w5.zip
+# (VERY LARGE FILE! >135 MB)
+# Data for PLX4720-treated melanoma cell lines was saved in separate file, maintaining exact data structure
+sData	<-	read.csv('../data for figs/Sanger PLX in melanoma cell lines.csv', as.is=TRUE)
+sData	<-	sData[,c('cell_line_name','drug_id','max_conc','ic_50_est','alpha_est','beta_est','i_0_est','i_max_est','e_est')]
+sData$drug_name	<-	'PLX4720'
+sData$EC50	<-	exp(sData$e_est)*1e-6				# convert from µM to M
+sData$IC50	<-	exp(sData$ic_50_est)*1e-6			# convert from µM to M
+
+## END LOAD DATA
+
+
+
+
 
 #########################################################################
 # 						  
@@ -679,11 +1009,77 @@ makeFig5c()
 makeFig5d()
 makeFig5e()
 makeFig5f()
+drcm	<-	makeSuppFig6b(nr=1,nc=4)	# needed to make Fig 6
+makeFig6()
+
 
 
 #########################################################################
 # 						  
-# 						SUPPLEMENTARY FIGURE 4
+# 						SUPPLEMENTARY FIGURE 6a
+# 						  
+#########################################################################
+makeSuppFig6a(nr=1,nc=4)
+
+
+#########################################################################
+# 						  
+# 						SUPPLEMENTARY FIGURES 3, 4 & 7
+# 						  
+#########################################################################
+findDIPgraphs	<-	function(dat=ds.data, toFile=FALSE, met='ar2',...)
+{
+	m <- list()
+	if(!toFile)	dev.new(width=7, height=9)
+	if(toFile)	pdf(file='findDIPrate.pdf', width=7, height=9)
+	par(mfrow=c(3,3), oma=c(0,1,0,0), mar=c(4,4,1,0.5))
+	for(sl in unique(dat$Subline))
+	{
+		dtp <- dat[dat$Subline==sl,c('Time_h','l2')]
+		m[[sl]] <-	plotGC_DIPfit(dtp=dtp,tit=sl, metric=met, newDev=FALSE, toFile=FALSE,...)
+	}
+	if(toFile)	dev.off()
+	m
+}
+
+subsamp	<-	function(dtf,...)
+{
+	out	<-	list()
+	while(nrow(dtf)>=5)
+	{
+		out[[nrow(dtf)+1]]	<-	tryCatch({plotGC_DIPfit(dtf,dat.type='l2',...)},
+			error=function(cond){
+				message=paste('Failed to plot data with',nrow(dtf),'rows')
+				return(NA)
+			}
+		)
+		dtf <- dtf[seq(1,nrow(dtf),2),]
+	}
+	
+	invisible(out[!is.na(out)])
+}
+
+makeSamplingFig	<-	function(toFile=FALSE)
+{
+	if(!toFile)	dev.new(width=7,height=12)
+	if(toFile)	pdf(file='Sampling.pdf', width=7,height=12)
+	par(mfrow=c(5,3), mar=c(3.5,3.5,1,1))
+	out <- subsamp(m$DS3$data,metric='ar2',tit='DS3',toFile=FALSE, newDev=FALSE)
+	if(toFile) dev.off()
+	invisible(out)
+}
+
+ds.data		<-	read.csv('../data for figs/DS345 growth curve data.csv', as.is=TRUE)
+ds.data		<- ds.data[ds.data$Subline!='PC9'& ds.data$Time_h<=120,]
+
+
+m	<-	findDIPgraphs(met='rmse',o=0.001,add.line.met='ar2',dat.type='l2')
+
+m2	<-	makeSamplingFig()
+
+#########################################################################
+# 						  
+# 						SUPPLEMENTARY FIGURE 8
 # 						  
 #########################################################################
 
@@ -733,6 +1129,7 @@ makeDensDIPfig	<-	function(toFile=FALSE)
 
 makeDensDep_nl2Fig	<-	function(toFile=FALSE)
 {
+	mycol	<-	topo.colors(length(unique(seed.data$Seeding.density)))
 	if(!toFile)		dev.new(width=4,height=4)
 	if(toFile)	pdf(file='SeedDens_nl2.pdf', width=4,height=4)
 	par(font.lab=2)
@@ -744,83 +1141,21 @@ makeDensDep_nl2Fig	<-	function(toFile=FALSE)
 }
 
 
-d	<-	read.csv('../data for figs/CellSeedingData.csv')
-rates <- getWellRates(d, c(70,200))
+# Pull data
+seed.data	<-	read.csv('../data for figs/CellSeedingData.csv')
+rates <- getWellRates(seed.data, c(70,200))
 
-p8 <- d[d$conc==8,]
+p8 <- seed.data[seed.data$conc==8,]
 p8.rates <- getWellRates(p8, c(70,200))
 p8.rates$Seeding.density	<-	p8[p8$Time==0,'Seeding.density']
 p8.rates$Seed.dens.fac <- factor(p8.rates$Seeding.density, levels=unique(p8.rates$Seeding.density))
 
-
-mycol	<-	topo.colors(length(unique(d$Seeding.density)))
-
-m <- lm(DIP ~ factor(Seeding.density), data=p8.rates)
-summary(m)
-anova(m)
-
+# Produce graphs
 
 makeDensDepGCfig()
 makeDensDIPfig()
 makeDensDep_nl2Fig()
 
 leveneTest(lm(DIP ~ Seed.dens.fac, data=p8.rates))
-
-
-
-#########################################################################
-# 						  
-# 						SUPPLEMENTARY FIGURES 3, 4 & 7
-# 						  
-#########################################################################
-findDIPgraphs	<-	function(toFile=FALSE, met='ar2',...)
-{
-	m <- list()
-	if(!toFile)	dev.new(width=7, height=9)
-	if(toFile)	pdf(file='findDIPrate.pdf', width=7, height=9)
-	par(mfrow=c(3,3), oma=c(0,1,0,0), mar=c(4,4,1,0.5))
-	for(sl in unique(d$Subline))
-	{
-		dtp <- d[d$Subline==sl,c('Time_h','l2')]
-		m[[sl]] <-	plotGC_DIPfit(dtp=dtp,tit=sl, metric=met, newDev=FALSE, toFile=FALSE,...)
-	}
-	if(toFile)	dev.off()
-	m
-}
-
-subsamp	<-	function(dtf,...)
-{
-	out	<-	list()
-	while(nrow(dtf)>=5)
-	{
-		out[[nrow(dtf)+1]]	<-	tryCatch({plotGC_DIPfit(dtf,...)},
-			error=function(cond){
-				message=paste('Failed to plot data with',nrow(dtf),'rows')
-				return(NA)
-			}
-		)
-		dtf <- dtf[seq(1,nrow(dtf),2),]
-	}
-	
-	invisible(out[!is.na(out)])
-}
-
-makeSamplingFig	<-	function(toFile=FALSE)
-{
-	if(!toFile)	dev.new(width=7,height=12)
-	if(toFile)	pdf(file='Sampling.pdf', width=7,height=12)
-	par(mfrow=c(5,3), mar=c(3.5,3.5,1,1))
-	out <- subsamp(m$DS3$data,metric='ar2',tit='DS3',toFile=FALSE, newDev=FALSE)
-	if(toFile) dev.off()
-	invisible(out)
-}
-
-d		<-	read.csv('../data for figs/DS345 growth curve data.csv', as.is=TRUE)
-d		<- d[d$Subline!='PC9'& d$Time_h<=120,]
-
-
-m	<-	findDIPgraphs(met='rmse',o=0.001,add.line.met='ar2')
-
-m2	<-	makeSamplingFig()
 
 
