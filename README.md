@@ -1,25 +1,23 @@
 ##**Code for generating figures for Harris et al., Nature Methods 2016**
 
-Code in this repository was written in R by _Darren Tyson_ and Python by _Leonard Harris_.
+All code in this repository was written by _Darren Tyson_ (R) and _Leonard Harris_ (Python).
 
 The R statistical software package is required to produce figures and can be obtained for free from [www.R-project.org](http://www.R-project.org)
 
 Also included in this repository is all necessary data in comma-separated value (.csv) format.
 
-
 To generate all figures, R must be in the directory in which this README file is found.
 
 Assuming you have all the required libraries installed, at the R command line prompt simply type:
 ```
-source("./code for figs/codeForFigs.R",chdir=TRUE)
+source("./code_for_figs/R/codeForFigs.R",chdir=TRUE)
 ```
-
 
 To see an example of how the `dipDRC` function takes raw cell count data, 
 estimates DIP rates and produces dose-response curves, at the R command line prompt
 type:
 ```
-source("./example dipDRC/makeDRCexample.R",chdir=TRUE)
+source("./example_dipDRC/makeDRCexample.R",chdir=TRUE)
 ```
 
 The data used in this example is in the file named: `dipDRC_example_data.csv`
