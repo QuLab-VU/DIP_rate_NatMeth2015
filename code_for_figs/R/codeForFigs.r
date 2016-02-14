@@ -3,6 +3,7 @@
 #
 #
 source('NatMethFxns.r')
+output.to.file = FALSE
 
 #########################################################################
 # 						  
@@ -45,7 +46,10 @@ for(i in colnames(param))
 
 makeFig2	<-	function(toFile=FALSE)
 {
-	if(toFile)	pdf(file='Theor time bias.pdf', width=10, height=5)
+	if(toFile){
+		dir.create('R-generated_figs', showWarnings = FALSE)
+		pdf(file=file.path('R-generated_figs', 'Theor time bias.pdf'), width=10, height=5)
+	}
 	if(!toFile)	dev.new(width=10, height=5)
 	par(mfrow=c(3,6), mar=c(0.5,3,1,1), oma=c(6,1,2,1))
 	for(i in colnames(param))
@@ -219,7 +223,10 @@ makeFig3	<-	function(toFile=FALSE, actual.DTP=TRUE)
 		'Theor drug effect delay (actual NCI DTP).pdf',
 		'Theor drug effect delay (ll4 fit to data).pdf')
 	if(!toFile)	dev.new(width=3, height=6)
-	if(toFile)	pdf(file=fn, width=3, height=6)
+	if(toFile){
+		dir.create('R-generated_figs', showWarnings = FALSE)
+		pdf(file=file.path('R-generated_figs', fn), width=3, height=6)
+	}
 	par(mar=c(3,3,1,1), oma=c(0,0,1,0), mfrow=c(2,1))
 	dtp	<-	cell.counts[['fast.ne']][,c('1e-11','6.31e-07')]
 
@@ -289,7 +296,7 @@ makeFig3	<-	function(toFile=FALSE, actual.DTP=TRUE)
 #########################################################################
 
 
-PEAdata		<-	read.csv('../../data_for_figs/BrCa_PEA_data.csv', as.is=TRUE)
+PEAdata		<-	read.csv(file.path('..', '..', 'data_for_figs', 'BrCa_PEA_data.csv'), as.is=TRUE)
 timeCols	<-	topo.colors(120)
 timeCols	<-	sub(topo.colors(120)[72], 'red', timeCols)
 
@@ -299,7 +306,10 @@ makeFig4	<-	function(d=PEAdata, toFile=FALSE,scale.bars=TRUE)
 	h		<-	5.5
 	nr		<-	2
 	if(!toFile)	dev.new(width=6,height=h)
-	if(toFile)	pdf(file='../R-generated figs/PEA data fig.pdf', width=6,height=h)
+	if(toFile){
+		dir.create('R-generated_figs', showWarnings = FALSE)
+		pdf(file=file.path('R-generated_figs', 'PEA data fig.pdf'), width=6,height=h)
+	}
 
 	par(mfrow=c(nr,3), mar=c(1,3,2,1), oma=c(5,1,2,1))
 
@@ -442,21 +452,21 @@ makeFig4	<-	function(d=PEAdata, toFile=FALSE,scale.bars=TRUE)
 
 # must ensure sufficient digits are available
 options(digits=12)
-PC9			<-	read.csv('../../data_for_figs/PC9DoseResp.csv', as.is=TRUE)
-DS.corr		<-	read.csv('../../data_for_figs/DS_corr_vals.csv', as.is=TRUE)
+PC9			<-	read.csv(file.path('..', '..', 'data_for_figs', 'PC9DoseResp.csv'), as.is=TRUE)
+DS.corr		<-	read.csv(file.path('..', '..', 'data_for_figs', 'DS_corr_vals.csv'), as.is=TRUE)
 allDRM		<-	getDRM()
-post72		<-	read.csv('../../data_for_figs/post72hCounts.csv', as.is=TRUE)
+post72		<-	read.csv(file.path('..', '..', 'data_for_figs', 'post72hCounts.csv'), as.is=TRUE)
 DS.dip		<-	assembleDIP(post72)
 # add DIP rate values into DS.corr data.frame
 DS.corr[DS.corr$var=='DIP',][sapply(DS.dip$all.rates$UID, FUN=function(x) 
 	grep(x, DS.corr[DS.corr$var=='DIP','ID'])),'val']	<- DS.dip$all.rates$DIP
-DS345_3erl		<-	read.csv('../../data_for_figs/DS345 growth curve data.csv', as.is=TRUE)
-DS345_erlDR	<-	read.csv('../../data_for_figs/DS345+erl in HTS core.csv',as.is=TRUE)
+DS345_3erl		<-	read.csv(file.path('..', '..', 'data_for_figs', 'DS345 growth curve data.csv'), as.is=TRUE)
+DS345_erlDR	<-	read.csv(file.path('..', '..', 'data_for_figs', 'DS345+erl in HTS core.csv'),as.is=TRUE)
 colnames(DS345_erlDR)	<-	c('plate','ID','Subline','conc','Time_h','Cell.count')
 
-brCa		<-	read.csv('../../data_for_figs/BrCa+EGFRi_data.csv', as.is=TRUE)
+brCa		<-	read.csv(file.path('..', '..', 'data_for_figs', 'BrCa+EGFRi_data.csv'), as.is=TRUE)
 
-brCa_static	<-	read.csv('../../data_for_figs/BrCa+EGFRi_static_data.csv', as.is=TRUE)
+brCa_static	<-	read.csv(file.path('..', '..', 'data_for_figs', 'BrCa+EGFRi_static_data.csv'), as.is=TRUE)
 # estimated cell numbers after 72 hours of drug treatment
 aggDynData	<-	function(d)	{
 	out	<-	data.frame()
@@ -482,7 +492,10 @@ stats	<-	generateStats(DS.corr)
 
 makeFig5a	<-	function(toFile=FALSE)
 {
-	if(toFile)	pdf('DS growth curves.pdf', width=4.5, height=3)
+	if(toFile){
+		dir.create('R-generated_figs', showWarnings = FALSE)
+		pdf(file.path('R-generated_figs', 'DS growth curves.pdf'), width=4.5, height=3)
+	}
 	if(!toFile)	dev.new(width=4.5, height=3)
 	par(mfrow=c(1,2), mar=c(5,4,1,0), cex=0.5, cex.axis=2, oma=c(1,1,1,5))
 	plot(nl2 ~ Time_h, data=DS345_3erl[DS345_3erl$Subline=='PC9',], xlab=NA, ylab=NA, xlim=c(0,150), 
@@ -541,8 +554,10 @@ makeFig5b	<-	function(toFile=FALSE,fn=paste0('Fig 5b DS345 DIP DRC ',' (',Sys.Da
 	
 	if(toFile) 
 	{
-		pdf(file=fn,width=3,height=3)
-	}	else {dev.new(width=3,height=3)}
+		dir.create('R-generated_figs', showWarnings = FALSE)
+		pdf(file=file.path('R-generated_figs', fn),width=3,height=3)
+	}	
+	else {dev.new(width=3,height=3)}
 	par(mar=c(4,3,1,1), oma=c(0,2,0,0))
 	plot(1,1, ylim=c(-0.25, 1), xlim=c(1e-9,1e-5),log='x', type='n', xlab=NA, ylab=NA, axes=FALSE, frame.plot=TRUE)
 	axis(side=1, at=10^(-9:-5), labels=(-9:-5), padj=0)
@@ -566,7 +581,10 @@ makeFig5b	<-	function(toFile=FALSE,fn=paste0('Fig 5b DS345 DIP DRC ',' (',Sys.Da
 
 makeFig5c	<-	function(toFile=FALSE)
 {
-	if(toFile)	pdf('10d corr.pdf', width=6, height=3)
+	if(toFile){
+		dir.create('R-generated_figs', showWarnings = FALSE)
+		pdf(file.path('R-generated_figs', '10d corr.pdf'), width=6, height=3)
+	}
 	if(!toFile)	dev.new(width=6, height=3)
 	par(mfrow=c(1,2), mar=c(3,3,1,1))
 	for(ty in c('DIP','norm72'))
@@ -592,7 +610,10 @@ makeFig5c	<-	function(toFile=FALSE)
 
 makeFig5d	<-	function(myData=maxConcData, toFile=FALSE, xl=c(0,144), yl=c(0,4))	{
 	if(!toFile)	dev.new(width=3, height=3)
-	if(toFile)	pdf(file='HCC1954 max drug growth curves.pdf', width=3, height=3)
+	if(toFile){
+		dir.create('R-generated_figs', showWarnings = FALSE)
+		pdf(file=file.path('R-generated_figs', 'HCC1954 max drug growth curves.pdf'), width=3, height=3)
+	}
 	par(font.lab=2, cex.lab=1.2, mar=c(3,3,1,1))
 	plot(	myData$Time-48, myData$nl2, type='n',
 			xlim=xl, ylim=yl,
@@ -619,7 +640,10 @@ makeFig5d	<-	function(myData=maxConcData, toFile=FALSE, xl=c(0,144), yl=c(0,4))	
 
 makeFig5e	<-	function(a=brCa_dyn, toFile=FALSE)	{
 	if(!toFile)	dev.new(width=7.5, height=2.5)
-	if(toFile)	pdf(file='../R-generated figs/HCC1954 conc effect curves w DIP.pdf', width=7.5, height=2.5)
+	if(toFile){
+		dir.create('R-generated_figs', showWarnings = FALSE)
+		pdf(file=file.path('R-generated_figs', 'HCC1954 conc effect curves w DIP.pdf'), width=7.5, height=2.5)
+	}
 	par(mfrow=c(1,3),font.lab=2, mar=c(3,1,1,1), oma=c(1,3,0,0))
 	for(tx in sort(unique(a$Treatment)))	{
 		dtp		<-	a[a$Time>=48 & (a$Treatment==tx | a$Conc==0),]
@@ -650,7 +674,10 @@ makeFig5e	<-	function(a=brCa_dyn, toFile=FALSE)	{
 
 makeFig5f	<-	function(a=brCa_static, toFile=FALSE)	{
 	if(!toFile)	dev.new(width=7.5, height=2.5)
-	if(toFile)	pdf(file='../R-generated figs/HCC1954 standard DRC.pdf', width=7.5, height=2.5)
+	if(toFile){
+		dir.create('R-generated_figs', showWarnings = FALSE)
+		pdf(file=file.path('R-generated_figs', 'HCC1954 standard DRC.pdf'), width=7.5, height=2.5)
+	}
 	par(mfrow=c(1,3),font.lab=2, mar=c(3,1,1,1), oma=c(1,3,0,0))
 	for(tx in sort(unique(a$Treatment)))	{
 		dtp	<-	a[a$Treatment==tx,]
@@ -817,14 +844,17 @@ getAA	<-	function(drmod, max=1)
 
 makeSuppFig6a	<-	function(toFile=FALSE,nc=5,nr=2,plot.scale=1, cellLines=unique(mel$cellLine))
 {
-	fn	<-	'../R-generated figs/mel GC.pdf'
+	fn	<-	file.path('R-generated_figs', 'mel GC.pdf')
 
 	cln			<-	unique(mel$cellLine)
 	timeCols	<-	topo.colors(120)
 	drug.conc	<-	unique(mel$Conc)
 	drugCols	<-	colorpanel(n=length(drug.conc),low='blue',mid=grey(0.5),high='red')
 	if(!toFile)	dev.new(width=nc*1.5*plot.scale,height=nr*2.5*plot.scale)
-	if(toFile)	pdf(file=fn, width=nc*1.5*plot.scale,height=nr*2.5*plot.scale)
+	if(toFile){
+		dir.create('R-generated_figs', showWarnings = FALSE)
+		pdf(file=fn, width=nc*1.5*plot.scale,height=nr*2.5*plot.scale)
+	}
 	par(mfrow=c(nr,nc), mar=c(4,2,1,1), oma=c(3,2,3,0))
 	for(cl in cellLines)
 	{
@@ -859,10 +889,13 @@ makeSuppFig6b	<-	function(toFile=FALSE, model.out=TRUE, addCCLE=FALSE, cellLines
 	m.dyn.norm	<-	list()
 	params		<-	data.frame()
 	ifelse(addCCLE, 
-		fn <- '../R-generated figs/Mel DIP rate DRC w CCLE.pdf',
-		fn <- '../R-generated figs/Mel DIP rate DRC.pdf')
+		fn <- file.path('R-generated_figs', 'Mel DIP rate DRC w CCLE.pdf'),
+		fn <- file.path('R-generated_figs', 'Mel DIP rate DRC.pdf'))
 	if(!toFile)	dev.new(width=nc*1.5*plot.scale,height=nr*2.5*plot.scale)
-	if(toFile)	pdf(file=fn, width=nc*1.5*plot.scale,height=nr*2.5*plot.scale)
+	if(toFile){
+		dir.create('R-generated_figs', showWarnings = FALSE)
+		pdf(file=fn, width=nc*1.5*plot.scale,height=nr*2.5*plot.scale)
+	}
 	par(mfrow=c(nr,nc), mar=c(4,2,1,1), oma=c(3,2,3,0))
 	for(cl in cellLines)
 	{
@@ -924,7 +957,10 @@ makeSuppFig6b	<-	function(toFile=FALSE, model.out=TRUE, addCCLE=FALSE, cellLines
 makeFig6	<-	function(toFile=FALSE, bias='IC50', after=48)
 {
 	if(!toFile)	dev.new(width=6,height=2.5)
-	if(toFile)	pdf(file='../Melanoma + BRAFi time bias.pdf',width=6,height=2.5)
+	if(toFile){
+		dir.create('R-generated_figs', showWarnings = FALSE)
+		pdf(file=file.path('R-generated_figs', 'Melanoma + BRAFi time bias.pdf'),width=6,height=2.5)
+	}
 	par(mfrow=c(1,4), mar=c(4,2,1,1), oma=c(0,2,3,0))
 	cln			<-	unique(mel$cellLine)
 	timeCols	<-	topo.colors(120)
@@ -965,24 +1001,24 @@ makeFig6	<-	function(toFile=FALSE, bias='IC50', after=48)
 ## LOAD DATA
 
 
-mel	<-	read.csv('../../data_for_figs/mel+plx time course.csv')
+mel	<-	read.csv(file.path('..', '..', 'data_for_figs', 'mel+plx time course.csv'))
 
 # Data downloaded from CCLE: Raw data dose-response data generated by the GDSCP used to obtain model fits
 # http://www.broadinstitute.org/ccle/downloadFile/DefaultSystemRoot/exp_10/ds_27/CCLE_NP24.2009_Drug_data_2015.02.24.csv?downloadff=true&fileId=20777
 # Data for PLX4720-treated melanoma cell lines was saved in separate file, maintaining exact data structure
-ccle.raw	<-	read.csv('../../data_for_figs/CCLE raw data (skin+PLX4720).csv', as.is=TRUE)
+ccle.raw	<-	read.csv(file.path('..', '..', 'data_for_figs', 'CCLE raw data (skin+PLX4720).csv'), as.is=TRUE)
 
 # Data downloaded from CCLE: Dose-response curve parameters generated by the GDSCP
 # http://www.broadinstitute.org/ccle/downloadFile/DefaultSystemRoot/exp_10/ds_27/CCLE_GNF_data_090613.xls?downloadff=true&fileId=13199
 # Data for PLX4720-treated melanoma cell lines was saved in separate file, maintaining exact data structure
-ccle		<-	read.csv('../../data_for_figs/BRAF mut DRC param from CCLE.csv', as.is=TRUE)
+ccle		<-	read.csv(file.path('..', '..', 'data_for_figs', 'BRAF mut DRC param from CCLE.csv'), as.is=TRUE)
 ccle$cellLine	<-	gsub('-','',ccle$cellLine)
 
 # Data downloaded from GDSCP: 
 # ftp://ftp.sanger.ac.uk/pub/project/cancerrxgene/releases/release-5.0/gdsc_drug_sensitivity_fitted_data_w5.zip
 # (VERY LARGE FILE! >135 MB)
 # Data for PLX4720-treated melanoma cell lines was saved in separate file, maintaining exact data structure
-sData	<-	read.csv('../../data_for_figs/Sanger PLX in melanoma cell lines.csv', as.is=TRUE)
+sData	<-	read.csv(file.path('..', '..', 'data_for_figs', 'Sanger PLX in melanoma cell lines.csv'), as.is=TRUE)
 sData	<-	sData[,c('cell_line_name','drug_id','max_conc','ic_50_est','alpha_est','beta_est','i_0_est','i_max_est','e_est')]
 sData$drug_name	<-	'PLX4720'
 sData$EC50	<-	exp(sData$e_est)*1e-6				# convert from µM to M
@@ -1000,17 +1036,17 @@ sData$IC50	<-	exp(sData$ic_50_est)*1e-6			# convert from µM to M
 # 						  
 #########################################################################
 
-makeFig2()
-makeFig3()
-makeFig4()
-makeFig5a()
-makeFig5b()
-makeFig5c()
-makeFig5d()
-makeFig5e()
-makeFig5f()
-drcm	<-	makeSuppFig6b(nr=1,nc=4)	# needed to make Fig 6
-makeFig6()
+makeFig2(toFile=output.to.file)
+makeFig3(toFile=output.to.file)
+makeFig4(toFile=output.to.file)
+makeFig5a(toFile=output.to.file)
+makeFig5b(toFile=output.to.file)
+makeFig5c(toFile=output.to.file)
+makeFig5d(toFile=output.to.file)
+makeFig5e(toFile=output.to.file)
+makeFig5f(toFile=output.to.file)
+drcm	<-	makeSuppFig6b(nr=1,nc=4,toFile=output.to.file)	# needed to make Fig 6
+makeFig6(toFile=output.to.file)
 
 
 
@@ -1019,19 +1055,22 @@ makeFig6()
 # 						SUPPLEMENTARY FIGURE 6a
 # 						  
 #########################################################################
-makeSuppFig6a(nr=1,nc=4)
+makeSuppFig6a(nr=1,nc=4,toFile=output.to.file)
 
 
 #########################################################################
 # 						  
-# 						SUPPLEMENTARY FIGURES 3, 4 & 7
+# 						SUPPLEMENTARY FIGURES 3 & 4
 # 						  
 #########################################################################
-findDIPgraphs	<-	function(dat=ds.data, toFile=FALSE, met='ar2',...)
+makeFindDIPgraphs	<-	function(dat=ds.data, toFile=FALSE, met='ar2',...)
 {
 	m <- list()
 	if(!toFile)	dev.new(width=7, height=9)
-	if(toFile)	pdf(file='findDIPrate.pdf', width=7, height=9)
+	if(toFile){
+		dir.create('R-generated_figs', showWarnings = FALSE)
+		pdf(file=file.path('R-generated_figs', 'findDIPrate.pdf'), width=7, height=9)
+	}
 	par(mfrow=c(3,3), oma=c(0,1,0,0), mar=c(4,4,1,0.5))
 	for(sl in unique(dat$Subline))
 	{
@@ -1062,20 +1101,23 @@ subsamp	<-	function(dtf,...)
 makeSamplingFig	<-	function(toFile=FALSE)
 {
 	if(!toFile)	dev.new(width=7,height=12)
-	if(toFile)	pdf(file='Sampling.pdf', width=7,height=12)
+	if(toFile){
+		dir.create('R-generated_figs', showWarnings = FALSE)
+		pdf(file=file.path('R-generated_figs', 'Sampling.pdf'), width=7,height=12)
+	}
 	par(mfrow=c(5,3), mar=c(3.5,3.5,1,1))
 	out <- subsamp(m$DS3$data,metric='ar2',tit='DS3',toFile=FALSE, newDev=FALSE)
 	if(toFile) dev.off()
 	invisible(out)
 }
 
-ds.data		<-	read.csv('../../data_for_figs/DS345 growth curve data.csv', as.is=TRUE)
+ds.data		<-	read.csv(file.path('..', '..', 'data_for_figs', 'DS345 growth curve data.csv'), as.is=TRUE)
 ds.data		<- ds.data[ds.data$Subline!='PC9'& ds.data$Time_h<=120,]
 
 
-m	<-	findDIPgraphs(met='rmse',o=0.001,add.line.met='ar2',dat.type='l2')
+m	<-	makeFindDIPgraphs(met='rmse',o=0.001,add.line.met='ar2',dat.type='l2',toFile=output.to.file)
 
-m2	<-	makeSamplingFig()
+m2	<-	makeSamplingFig(toFile=output.to.file)
 
 #########################################################################
 # 						  
@@ -1104,7 +1146,10 @@ getWellRates	<-	function(raw, time.range=c(70,120))
 makeDensDepGCfig	<-	function(toFile=FALSE)
 {
 	if(!toFile)	dev.new(width=10,height=2.5)
-	if(toFile)	pdf(file='SeedDensGC.pdf', width=10,height=2.5)
+	if(toFile){
+		dir.create('R-generated_figs', showWarnings = FALSE)
+		pdf(file=file.path('R-generated_figs', 'SeedDensGC.pdf'), width=10,height=2.5)
+	}
 	par(mfrow=c(1,6), oma=c(1,2,0,0), mar=c(3,2,1,0.5), cex=0.75)
 	for(s in unique(p8$Seeding.density))
 	{
@@ -1121,7 +1166,10 @@ makeDensDepGCfig	<-	function(toFile=FALSE)
 makeDensDIPfig	<-	function(toFile=FALSE)
 {
 	if(!toFile)	dev.new(width=6, height=3)
-	if(toFile)	pdf(file='SeedDensOnDIP.pdf', width=6, height=3)
+	if(toFile){
+		dir.create('R-generated_figs', showWarnings = FALSE)
+		pdf(file=file.path('R-generated_figs', 'SeedDensOnDIP.pdf'), width=6, height=3)
+	}
 	par(mar=c(4,4,1,1),font.lab=2)
 	plot(DIP ~ Seed.dens.fac, data=p8.rates, ylab="DIP rate, doublings h-1", xlab="Cells per well", ylim=c(0.005,0.02), lab.font=2)
 	if(toFile) dev.off()
@@ -1131,7 +1179,10 @@ makeDensDep_nl2Fig	<-	function(toFile=FALSE)
 {
 	mycol	<-	topo.colors(length(unique(seed.data$Seeding.density)))
 	if(!toFile)		dev.new(width=4,height=4)
-	if(toFile)	pdf(file='SeedDens_nl2.pdf', width=4,height=4)
+	if(toFile){
+		dir.create('R-generated_figs', showWarnings = FALSE)
+		pdf(file=file.path('R-generated_figs', 'SeedDens_nl2.pdf'), width=4,height=4)
+	}
 	par(font.lab=2)
 	plot(nl2 ~ Time, data=p8, type='n', ylim=c(-1,2), ylab='Population doublings')
 	for(w in unique(p8$Well)) lines(p8[p8$Well==w,'Time'],p8[p8$Well==w,'nl2'], 
@@ -1142,7 +1193,7 @@ makeDensDep_nl2Fig	<-	function(toFile=FALSE)
 
 
 # Pull data
-seed.data	<-	read.csv('../../data_for_figs/CellSeedingData.csv')
+seed.data	<-	read.csv(file.path('..', '..', 'data_for_figs', 'CellSeedingData.csv'))
 rates <- getWellRates(seed.data, c(70,200))
 
 p8 <- seed.data[seed.data$conc==8,]
@@ -1152,9 +1203,9 @@ p8.rates$Seed.dens.fac <- factor(p8.rates$Seeding.density, levels=unique(p8.rate
 
 # Produce graphs
 
-makeDensDepGCfig()
-makeDensDIPfig()
-makeDensDep_nl2Fig()
+makeDensDepGCfig(toFile=output.to.file)
+makeDensDIPfig(toFile=output.to.file)
+makeDensDep_nl2Fig(toFile=output.to.file)
 
 leveneTest(lm(DIP ~ Seed.dens.fac, data=p8.rates))
 
