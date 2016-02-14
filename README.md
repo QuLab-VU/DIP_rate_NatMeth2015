@@ -25,14 +25,17 @@ Assuming all required packages are installed, to run the code type the following
 setwd("[path_to_download_dir]/DIP_rate_NatMeth2016/code_for_figs/R")
 source("codeForFigs.r")
 ```
-where `[path_to_download_dir]` is the directory to which you downloaded this repository.
+where `[path_to_download_dir]` is the directory to which you downloaded this repository (e.g., `/Users/mycomp/git`).
 
-Similarly, to run the example using the `dipDRC.r` code that takes raw cell count data, estimates DIP rates, 
-and produces dose-response curves, type:
+Similarly, to run the example application of the `dipDRC.r` code type:
 ```
 setwd("[path_to_download_dir]/DIP_rate_NatMeth2016/example_dipDRC")
 source("makeDRCexample.r")
 ```
+The output is a graphics window with two plots, one for each cell line and drug condition, and a list of the two 
+`drm` (dose-response model) objects, described in detail in the package information for the `drc` library 
+([https://cran.r-project.org/web/packages/drc/drc.pdf](https://cran.r-project.org/web/packages/drc/drc.pdf)).
+
 The data used in this example are the raw breast cancer (MDA-MB-231) cell counts for rotenone
 and phenformin treatments. They can be found in the file `example_dipDRC/dipDRC_example_data.csv`. The data 
 are from a single experiment with two technical replicates. The data file is structured as a 
@@ -44,10 +47,6 @@ seven-column matrix with the following headers:
 5) `conc`
 6) `well`
 7) `expt.date`
-
-The output is a graphics window with two plots, one for each cell line and drug condition,
-and a list of the two `drm` (dose-response model) objects, described in detail in the package information for the
-`drc` library ([https://cran.r-project.org/web/packages/drc/drc.pdf](https://cran.r-project.org/web/packages/drc/drc.pdf)).
 
 ###**Instructions for running the Python code**
 
