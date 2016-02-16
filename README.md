@@ -52,12 +52,16 @@ seven-column matrix with the following headers:
 
 The Python code for generating Supplementary Figure 7 ("Theoretical effects of variations around a mean cell seeding
 density") is in the file `makeSuppFig7.py` within the `code_for_figs/Python` directory. Running the code requires installing `pysb`, 
-a Python-based platform for biological modeling and simulation (see [www.pysb.org](http://pysb.org/)). This can be done
-by opening a command prompt and typing
+a Python-based platform for biological modeling and simulation (see [www.pysb.org](http://pysb.org/)). PySB version 1.0.1
+can be installed (Mac/Linux) by opening a command prompt and typing
 ```
 sudo pip install pysb
 ``` 
-(this will install pysb version 1.0.1). `makeSuppFig7.py` can then be run by simply typing
+PySB also requires installing BioNetGen ([www.bionetgen.org](http://www.bionetgen.org)). Please see 
+[docs.pysb.org/en/latest/installation.html](http://docs.pysb.org/en/latest/installation.html) for further installation 
+instructions.
+
+Once PySB and all its dependencies are installed, `makeSuppFig7.py` can be run by simply typing
 ```
 python makeSuppFig7.py
 ```
