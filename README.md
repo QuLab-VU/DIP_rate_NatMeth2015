@@ -50,4 +50,18 @@ seven-column matrix with the following headers:
 
 ###**Instructions for running the Python code**
 
-**_Coming soon_
+The Python code for generating Supplementary Figure 7 ("Theoretical effects of variations around a mean cell seeding
+density") is in the file `makeSuppFig7.py` within the `code_for_figs/Python` directory. Running the code requires installing `pysb`, 
+a Python-based platform for biological modeling and simulation (see [www.pysb.org](http://pysb.org/)). This can be done
+by opening a command prompt and typing
+```
+sudo pip install pysb
+``` 
+(this will install pysb version 1.0.1). `makeSuppFig7.py` can then be run by simply typing
+```
+python makeSuppFig7.py
+```
+The output is three figures: `timecourses.pdf` (Supplementary Fig. 7a), `boxplots.pdf` (Supplementary Fig. 7b), and `distributions.pdf`
+(Supplementary Fig. 7c,d). Functionally, the code runs 10^5 control simulations and 10^4 drug-treated simulations for each
+of two scenarios: (i) variations in cell seeding density alone, and (ii) variations in both sampling time and cell seeding
+density, for a total of 2*10^5+2*10^4=220,000 simulations (i.e., it may take a while to finish).
