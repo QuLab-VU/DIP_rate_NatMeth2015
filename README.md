@@ -68,4 +68,4 @@ python makeSuppFig7.py
 The output is three figures: `timecourses.pdf` (Supplementary Fig. 7a), `boxplots.pdf` (Supplementary Fig. 7b), and `distributions.pdf`
 (Supplementary Fig. 7c,d). Functionally, the code runs 10^5 control simulations and 10^4 drug-treated simulations for each
 of two scenarios: (i) variations in cell seeding density alone, and (ii) variations in both sampling time and cell seeding
-density, for a total of 2*10^5+2*10^4=220,000 simulations (i.e., it may take a while to finish).
+density. This amounts to a total of 2\*10^5+2\*10^4=220,000 simulations (i.e., it may take a while to finish).
