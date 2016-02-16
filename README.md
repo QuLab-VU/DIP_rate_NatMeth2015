@@ -37,8 +37,8 @@ The output is a graphics window with two plots, one for each cell line and drug 
 ([https://cran.r-project.org/web/packages/drc/drc.pdf](https://cran.r-project.org/web/packages/drc/drc.pdf)).
 
 The data used in this example are the raw breast cancer (MDA-MB-231) cell counts for rotenone
-and phenformin treatments. They can be found in the file `example_dipDRC/dipDRC_example_data.csv`. The data 
-are from a single experiment with two technical replicates. The data file is structured as a 
+and phenformin treatments. They can be found in the file `dipDRC_example_data.csv` within the `example_dipDRC` directory. 
+The data are from a single experiment with two technical replicates. The data file is structured as a 
 seven-column matrix with the following headers:
 1) `time`
 2) `cell.count`

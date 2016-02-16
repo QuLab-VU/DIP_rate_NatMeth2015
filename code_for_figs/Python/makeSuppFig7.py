@@ -46,7 +46,7 @@ k0 = model.parameters['kdiv0'].value - model.parameters['kdth0'].value
 # drugged prolif rate
 drug = 0.003 # uM
 model.parameters['Drug0'].value = drug # uM
-x = odesolve(model, tspan, verbose=False)
+x = odesolve(model, tspan) #, verbose=False)
 slope, intercept, r_value, p_value, std_err = ss.linregress(tspan[10:], np.log(x['Cell_total'][10:]))
 kdrug = slope
 
@@ -63,10 +63,10 @@ for i,n in enumerate(ncells):
     model.parameters['Cell0_init'].value = n
     if i < 100:
         plt.figure('tc')
-        x = odesolve(model, tspan, verbose=False)
+        x = odesolve(model, tspan) #, verbose=False)
         plt.plot(tspan, x['Cell_total'], color='0.5')
     else:
-        x = odesolve(model, [0, tspan[-1]], verbose=False)
+        x = odesolve(model, [0, tspan[-1]]) #, verbose=False)
     final_control.append(x['Cell_total'][-1])
 plt.xlabel('time (h)', fontsize=18)
 plt.ylabel('N (count)', fontsize=18)
@@ -109,10 +109,10 @@ for i,n in enumerate(ncells):
     model.parameters['Cell0_init'].value = n
     if i < 1000:
         plt.figure('tc')
-        x = odesolve(model, tspan, verbose=False)
+        x = odesolve(model, tspan) #, verbose=False)
         plt.plot(tspan, x['Cell_total'], color='k')
     else:
-        x = odesolve(model, [0, tspan[-1]], verbose=False)
+        x = odesolve(model, [0, tspan[-1]]) #, verbose=False)
     final_treated.append(x['Cell_total'][-1])
 plt.savefig('timecourses.pdf', format='pdf', dpi=1000)
 #####
@@ -171,7 +171,7 @@ final_control = []
 for i,n in enumerate(ncells):
     print i
     model.parameters['Cell0_init'].value = n
-    x = odesolve(model, [0, times[i]], verbose=False)
+    x = odesolve(model, [0, times[i]]) #, verbose=False)
     final_control.append(x['Cell_total'][-1])
 #####
 min = 0
@@ -211,7 +211,7 @@ final_treated = []
 for i,n in enumerate(ncells):
     print i
     model.parameters['Cell0_init'].value = n
-    x = odesolve(model, [0, times[i]], verbose=False)
+    x = odesolve(model, [0, times[i]]) #, verbose=False)
     final_treated.append(x['Cell_total'][-1])
 #####
 ax.hist(final_treated, bins=30, normed=True, range=(4,12))
