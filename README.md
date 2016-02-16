@@ -58,7 +58,7 @@ can be installed (Mac/Linux) by opening a command prompt and typing
 sudo pip install pysb
 ``` 
 PySB also requires installing BioNetGen ([www.bionetgen.org](http://www.bionetgen.org)). Please see 
-[docs.pysb.org/en/latest/installation.html](http://docs.pysb.org/en/latest/installation.html) for further installation 
+[docs.pysb.org/en/latest/installation.html](http://docs.pysb.org/en/latest/installation.html) for detailed installation 
 instructions.
 
 Once PySB and all its dependencies are installed, `makeSuppFig7.py` can be run by simply typing
