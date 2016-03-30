@@ -80,7 +80,7 @@ getCellCount	<-	function(parameters)
 		p	<-	append(parameters,dc)
 		names(p)[5]	<-	'Drug'
 		temp		<- as.data.frame(ode(y = states, times = times, func = twoStateModel, parms = p))
-		Cell.tot	<-	as.numeric(temp$Cell+temp$CellPrime)
+		Cell.tot	<-	round(as.numeric(temp$Cell+temp$CellPrime),0)
 		ifelse(dc==drug.conc[1], out <- data.frame(times,Cell.tot), out <- cbind(out,Cell.tot))
 	}
 	colnames(out)	<-	c('time',as.character(drug.conc))
@@ -186,10 +186,6 @@ scatterPlotErr	<-	function(dtp,x.var,y.var,add.line=FALSE,xlab.txt=x.var,ylab.tx
 	if(add.line)	abline(coef(my.fit),lty=2,lwd=2)	
 }
 
-getDIP		<-	function(dtf)	{
-	myMod	<-	lm(nl2 ~ time, data=dtf)
-	coef(myMod)['time']
-}
 
 getDRM	<-	function(dat=PC9)
 {
@@ -260,7 +256,7 @@ rmsd	<-	function(resid)
 }
 
 
-findDIP	<-	function(dtf,name='unknown',all.models=FALSE, metric=c('opt','ar2','rmse')[1], o=0, dat.type='cell.counts')
+findDIP	<-	function(dtf,name='unknown',all.models=FALSE, metric=c('opt','ar2','rmse')[1], o=0, dat.type='cell.counts', print.dip=FALSE)
 {
 	if(nrow(dtf)<5 | ncol(dtf)<2)
 	{
@@ -346,14 +342,14 @@ findDIP	<-	function(dtf,name='unknown',all.models=FALSE, metric=c('opt','ar2','r
 	dip	<-	coef(m[[idx]])[2]
 	ci	<-	diff(confint(m[[idx]])[2,])/2
 	names(ci)	<-	'±'
-	print(paste('DIP =',round(dip,4),'starting at',round(x[idx],2),'with',n+2,'data points'))
+	if(print.dip) print(paste('DIP =',round(dip,4),'starting at',round(x[idx],2),'with',n+2,'data points'))
 	out=list(data=data.frame(Time_h=x,l2=y), model=m, metric.used=metric, n=n, idx=idx, best.model=m[[idx]], opt=opt, 
 		eval.times=x[seq(n)], rmse=rmse,ar2=ar2,p=p,start.time=x[idx],dip=dip, dip.95ci=ci, rmse.p5.1std.coef=rmse.p5.1std.coef)
 	if(!all.models)
 	{
 		out[["model"]] <- NULL
 	}
-	return(out)
+	invisible(out)
 }
 
 
@@ -461,3 +457,183 @@ getWellRates	<-	function(raw, time.range=c(70,120))
 	rownames(out)	<-	NULL
 	out
 }
+
+aggDynData	<-	function(d)	{
+	out	<-	data.frame()
+	for(tx in unique(d$Treatment))
+	{
+		dta	<-	d[d$Conc==0 | d$Treatment==tx,]
+		a	<-	aggregate(nl2 ~ Conc + Time, data=dta, FUN=mean)
+		a	<-	cbind(Treatment=tx,a)
+		a	<-	a[order(a$Conc,a$Time),]
+		ifelse(nrow(out)==0, out <- a, out <- rbind(out,a))
+	}
+	rownames(out)	<-	NULL
+	out$Treatment	<-	as.character(out$Treatment)
+	out[!duplicated(makeUCond(out,c('Treatment','Time'))),]
+	out
+}
+
+getDIP		<-	function(dtf, yName='nl2', timeName='rel.time', concName='Conc', after=48)
+{
+	dfd			<-	dtf[dtf[,timeName] >= after,]
+	conc		<-	unique(dtf[,concName])
+	f			<-	formula(paste(yName,'~',timeName,'* factor(',concName,')'))
+	myMod		<-	lm(f, data=dfd, na.action=na.omit)
+	dipRates	<-	coef(myMod)
+	dipRates	<-	dipRates[grep(timeName,names(dipRates))]
+	dipRates	<-	c(dipRates[1],dipRates[-1]+dipRates[1])
+	names(dipRates)	<-	conc
+	dipRates
+}
+
+
+myll4	<-	function(x,b,c,d,e)
+{
+#                           d - c           
+# f(x)  =  c  +  ---------------------------
+#                1 + exp(b(log(x) - log(e)))
+#	b: Hill coefficient
+#	c: lower limit (Emax)
+#	d: upper limit (Emin)
+#	e: EC50 (not log scaled)
+	c + ( (d - c) / (1 + exp(b*(log(x) - log(e)))))
+}
+
+myll5	<-	function(x,b,c,d,e,f)
+{
+#                           d - c           
+# f(x)  =  c  +  ---------------------------
+#                1 + exp(b(log(x) - log(e)))
+#	b: Hill coefficient
+#	c: lower limit (Emax)
+#	d: upper limit (Emin)
+#	e: EC50 (not log scaled)
+#	f: shape parameter
+	c + ( (d - c) / ((1 + exp(b*(log(x) - log(e)))))^f)
+}
+
+
+prepSangerDRC	<-	function(ll5.param=sData[1,])
+{
+	# sangerDRC parameters
+	# ic_50_est			==		NOT A FIT PARAMETER. CALCULATED FROM BEST-FIT MODEL
+	# alpha_est			== 		f: shape parameter
+	# beta_est			== 		b: Hill coeff
+	# i_0_est			== 		c: lower; control cells intens (no drug)
+	# i_max_est			== 		d: upper; blank val; no cells intens
+	# e_est				==		e: EC50, base e
+
+	colnames(ll5.param)[colnames(ll5.param)=='alpha_est']		<-	'shape'
+	colnames(ll5.param)[colnames(ll5.param)=='beta_est']		<-	'Hill'
+	colnames(ll5.param)[colnames(ll5.param)=='i_0_est']			<-	'lower'
+	colnames(ll5.param)[colnames(ll5.param)=='i_max_est']		<-	'upper'
+	ll5.param[colnames(ll5.param)=='ic_50_est']					<-	exp(ll5.param['ic_50_est']) * 1e-6		# convert from natural log µM to M
+	colnames(ll5.param)[colnames(ll5.param)=='ic_50_est']		<-	'IC50'
+	colnames(ll5.param)[colnames(ll5.param)=='e_est']			<-	'EC50'
+	ll5.param$EC50			<-	exp(ll5.param$EC50) * 1e-6		# convert from natural log µM to M
+	ll5.param		<-	ll5.param[,c('Hill','lower','upper','EC50','shape')]
+	names(ll5.param)	<-	letters[2:6]
+	as.list(ll5.param)
+}
+
+convertLL5toLL4	<-	function(ll5.param=prepSangerDRC(), out='param')
+{
+	x			<-	10^(seq(-11,-4,0.1))
+	temp		<-	data.frame(drug.conc=x,intensity=do.call(myll5, args=append(list(x=x),ll5.param), env=.GlobalEnv))
+	m			<-	drm(intensity ~ drug.conc, data=temp, fct=LL.4())
+	ll4.param	<-	as.list(coef(m))
+	names(ll4.param)	<-	letters[2:5]
+	if(out!='param') {ret	<-	m} else {ret	<-	ll4.param}
+	ret
+}
+
+getDRMfromCCLE	<-	function(raw.data.row)	{
+	d	<-	tData(raw.data.row)
+	d$y	<-	(100+d$resp) / 100
+	d$x	<-	d$conc*1e-6			# Molar concentration
+	drm(y ~ x, data=d, fct=LL.4())	
+}
+
+inCCLE	<-	function(cl.name)	any(grepl(cl.name,ccle.raw$CCLE.Cell.Line.Name))
+
+tData		<-	function(myData)	
+{
+# function for extracting data from raw GDSC (Sanger) data
+	if(class(myData)!="data.frame" | nrow(myData)!=1)
+	{
+		cat('Data sent to tData function must be a data.frame with one row\n')
+		break
+	}
+	cellLine	<-	myData$Primary.Cell.Line.Name[1]
+	drug		<-	myData$Compound[1]
+	doses		<-	as.numeric(unlist(strsplit(myData$Doses..uM., '\\,')))
+	act			<-	as.numeric(unlist(strsplit(myData$Activity.Data..median., '\\,')))
+	SD			<-	as.numeric(unlist(strsplit(myData$Activity.SD, '\\,')))
+	len			<-	length(doses)
+	EC50		<-	myData$EC50..uM.
+	IC50		<-	myData$IC50..uM.
+	Amax		<-	myData$Amax
+	ActArea		<-	myData$ActArea
+	out			<-	data.frame(	cellLine=rep(cellLine,len),
+		drug=rep(drug,len),
+		conc=doses,
+		resp=act,
+		SD=SD,
+		EC50=rep(EC50,len),
+		IC50=rep(IC50,len),
+		Amax=rep(Amax,len),
+		ActArea=rep(ActArea,len)
+	)
+	out
+}
+
+getAA	<-	function(drmod, max=1)
+{
+	# drmod is dose–response model (drm)
+	# normalizing to 0 as maximum level by subtracting max from all values
+	# rescaling total possible area by dividing by the number of measurements
+	# This approach is equivalent to that used by Barretina et al.
+	# See doi:10.1038/nature11735
+	myargs			<-	as.list(coef(drmod))
+	names(myargs)	<-	c('b','c','d','e')
+	vals	<-	do.call(myll4, args=append(list(x=drug.conc),myargs))-max
+	-sum(vals) / length(vals)
+}
+
+subsamp	<-	function(dtf,...)
+{
+	out	<-	list()
+	while(nrow(dtf)>=5)
+	{
+		out[[nrow(dtf)+1]]	<-	tryCatch({plotGC_DIPfit(dtf,dat.type='l2',...)},
+			error=function(cond){
+				message=paste('Failed to plot data with',nrow(dtf),'rows')
+				return(NA)
+			}
+		)
+		dtf <- dtf[seq(1,nrow(dtf),2),]
+	}
+	
+	invisible(out[!is.na(out)])
+}
+
+getWellRates	<-	function(raw, time.range=c(70,120))
+{
+	timeName	<-	colnames(raw)[grep('[Tt]ime', colnames(raw))]
+	wellName	<-	colnames(raw)[grep('[Ww]ell',colnames(raw))]
+	dateName	<-	colnames(raw)[grep('[Dd]ate',colnames(raw))]
+	if(length(wellName)>1)	wellName	<-	wellName[nchar(wellName)==4]
+	f	<-	formula(paste('nl2 ~ ',timeName,' * ',wellName))
+	m	<-	lm(f, data=raw[raw[,timeName] > time.range[1] & raw[,timeName] < time.range[2],])
+	wells	<-	unique(raw[,wellName])
+	rates	<-	coef(m)[grep(timeName,names(coef(m)))]
+	rates	<-	c(rates[1],rates[-1]+rates[1])
+	cl		<-	unique(raw$cellLine)
+	expt	<-	ifelse(is.null(unique(raw[,dateName])), 'unknown date',unique(raw[,dateName]))
+	out		<-	data.frame(Well=wells, DIP=rates, cellLine=cl, Date=expt)
+	rownames(out)	<-	NULL
+	out
+}
+
+
