@@ -1,9 +1,17 @@
-# if devtools library not insalled, uncomment next line
 #install.packages('devtools')
-
 # libraries necessary to load source files directly from GitHub
-library(devtools)
-library(RCurl)
+getPackageIfNeeded <- function(pkg) {
+  if (!require(pkg, character.only=TRUE))
+    install.packages(pkgs=pkg, dependencies=TRUE)
+}
+
+pkgs	<-	c("devtools", "RCurl")
+
+sapply(pkgs,getPackageIfNeeded)
+
+
+require(devtools)			# for dose-response curves; version 2.5-12
+require(RCurl)			# for linear detailed regression analysis
 
 # pull source code directly from GitHub
 SourceURL <- "https://raw.github.com/QuLab-VU/DIP_rate_NatMeth2016/master/dipDRC/dipDRC.r"
