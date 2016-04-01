@@ -20,18 +20,25 @@ grid
 drc
 MASS
 ```
-Assuming all required packages are installed, to run the code type the following in the R console:
+Assuming all required packages are installed, to generate all the graphs shown in the manuscript figures
+and supplementary information, type the following in the R console:
 ```
-setwd("[path_to_download_dir]/DIP_rate_NatMeth2016/code_for_figs/R")
-source("codeForFigs.r")
+source("[path_to_download_dir]/DIP_rate_NatMeth2016/code_for_figs/RcodeForFigs.r", chdir=TRUE)
 ```
 where `[path_to_download_dir]` is the directory to which you downloaded this repository (e.g., `/Users/mycomp/git`).
 
-Similarly, to run the example application of the `dipDRC.r` code type:
+An example application of the `dipDRC.r` code can be performed without downloading the entire Git repository
+by copying all the code shown in:
+
+([https://github.com/QuLab-VU/DIP_rate_NatMeth2016/blob/master/example_dipDRC/makeDRCexample.r](https://github.com/QuLab-VU/DIP_rate_NatMeth2016/blob/master/example_dipDRC/makeDRCexample.r))
+
+####*NOTE that running this code will download and install a number of R libraries automatically*
+
+Alternatively, the code can be run from a local version using a similar format as for generting the manuscript figures:
 ```
-setwd("[path_to_download_dir]/DIP_rate_NatMeth2016/example_dipDRC")
-source("makeDRCexample.r")
+source("[path_to_download_dir]/DIP_rate_NatMeth2016/example_dipDRC/makeDRCexample.r", chdir=TRUE)
 ```
+
 The output is a graphics window with two plots, one for each cell line and drug condition, and a list of the two 
 `drm` (dose-response model) objects, described in detail in the package information for the `drc` library 
 ([https://cran.r-project.org/web/packages/drc/drc.pdf](https://cran.r-project.org/web/packages/drc/drc.pdf)).
