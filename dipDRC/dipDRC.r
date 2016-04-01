@@ -1,3 +1,13 @@
+getPackageIfNeeded <- function(pkg) {
+  if (!require(pkg, character.only=TRUE))
+    install.packages(pkgs=pkg, dependencies=TRUE)
+}
+
+pkgs	<-	c("drc", "car")
+
+sapply(pkgs,getPackageIfNeeded)
+
+
 require(drc)			# for dose-response curves; version 2.5-12
 require(car)			# for linear detailed regression analysis
 
@@ -98,7 +108,7 @@ makeUCond	<-	function(dat,var)
 	apply(dat[,var],1, function(x) paste(x, collapse='_'))
 }
 
-findDIP	<-	function(dtf,name='unknown',all.models=FALSE, metric=c('opt','ar2','rmse')[1], o=0, dat.type='cell.counts')
+findDIP	<-	function(dtf,name='unknown',all.models=FALSE, metric=c('opt','ar2','rmse')[1], o=0, dat.type='cell.counts', print.dip=FALSE)
 {
 	if(nrow(dtf)<5 | ncol(dtf)<2)
 	{
@@ -184,14 +194,14 @@ findDIP	<-	function(dtf,name='unknown',all.models=FALSE, metric=c('opt','ar2','r
 	dip	<-	coef(m[[idx]])[2]
 	ci	<-	diff(confint(m[[idx]])[2,])/2
 	names(ci)	<-	'±'
-	print(paste('DIP =',round(dip,4),'starting at',round(x[idx],2),'with',n+2,'data points'))
+	if(print.dip) print(paste('DIP =',round(dip,4),'starting at',round(x[idx],2),'with',n+2,'data points'))
 	out=list(data=data.frame(Time_h=x,l2=y), model=m, metric.used=metric, n=n, idx=idx, best.model=m[[idx]], opt=opt, 
 		eval.times=x[seq(n)], rmse=rmse,ar2=ar2,p=p,start.time=x[idx],dip=dip, dip.95ci=ci, rmse.p5.1std.coef=rmse.p5.1std.coef)
 	if(!all.models)
 	{
 		out[["model"]] <- NULL
 	}
-	return(out)
+	invisible(out)
 }
 
 sumRep	<-	function(count,ids)
@@ -204,28 +214,51 @@ sumRep	<-	function(count,ids)
 
 # Function to extract DIP rate across multiple condititons 
 # and calculate a 4-param logistic fit
-dipDRC	<-	function(dtf, xName='time', yName='cell.count', var=c('cell.line','drug','conc','expt.date'), norm=FALSE, plotIt=TRUE, ...)
+# Function to extract DIP rate across multiple condititons 
+# and calculate a 4-param logistic fit
+dipDRC	<-	function(dtf, xName='time', yName='cell.count', var=c('cell.line','drug','conc','expt.date'), 
+	print.dip=FALSE, norm=FALSE, plotIt=TRUE, toFile=FALSE, showEC50=TRUE, ...)
 {	
+	if(plotIt & toFile)	pdf('dipDRC_graphs.pdf')
+	concName	<-	var[grep('[Cc]onc',var)]
+	exptID		<-	var[grepl('[Dd]ate',var) | grepl('[Ii][Dd]',var)][1]
 	dtf$u.cond		<-	makeUCond(dtf,var)
-	dtf$cell.drug	<-	makeUCond(dtf,c('cell.line','drug'))
+	dtf$cell.drug	<-	makeUCond(dtf,var[1:2])
 	out	<-	list()
 	for(ucd	in unique(dtf$cell.drug))
 	{
 		temp		<-	dtf[dtf$cell.drug==ucd,]
-		Uconc		<-	unique(temp$conc)
+		Uconc		<-	unique(temp[,concName])
 		dip.rates	<-	temp[match(unique(temp$u.cond),temp$u.cond),var]
 		rownames(dip.rates)	<-	NULL
 		dip.rates	<-	cbind(dip=NA,dip.rates)
-		for(co in unique(Uconc)) dip.rates[dip.rates$conc==co,'dip']	<-	findDIP(sumRep(temp[temp$conc==co,'cell.count'],temp[temp$conc==co,'time']))$dip
-		dip.rates$norm.dip	<-	dip.rates$dip/dip.rates[dip.rates$conc==min(dip.rates$conc),'dip']
+		for(r in unique(temp[,exptID]))
+		{
+			for(co in unique(Uconc)) 
+			{
+				dip.rates[dip.rates[,concName]==co & dip.rates[,exptID]==r,'dip']	<-	
+					findDIP(sumRep(	temp[temp[,concName]==co & temp[,exptID]==r,yName],
+									temp[temp[,concName]==co & temp[,exptID]==r,xName]), print.dip=print.dip)$dip
+			}
+		}
+		dip.rates$norm.dip	<-	dip.rates$dip/dip.rates[dip.rates[,concName]==min(dip.rates[,concName]),'dip']
 		if(norm)
 		{	
-			out[[ucd]] <- drm(norm.dip~conc,data=dip.rates,fct=LL.4())
+			# need to make formula using correct names
+			out[[ucd]] <- tryCatch({drm(norm.dip~conc,data=dip.rates,fct=LL.4())},error=function(cond) {return(NA)})
 		} else
 		{
-			out[[ucd]] <- drm(dip~conc,data=dip.rates,fct=LL.4())	
+			out[[ucd]] <- tryCatch({drm(dip~conc,data=dip.rates,fct=LL.4())	},error=function(cond) {return(NA)})
 		}
-		if(plotIt) plot(out[[ucd]],main=ucd, ...)
+		if(plotIt & !is.na(out[[ucd]][1]))
+		{
+			plot(out[[ucd]],main=ucd, ...)
+			if(showEC50) abline(v=ED(out[[ucd]],50,interval='delta',display=FALSE)[1],col='red')
+			abline(h=0, col=grey(0.5), lty=2)
+		}
 	}
-	out
+	if(plotIt & toFile) dev.off()
+	invisible(out)
 }
+
+
