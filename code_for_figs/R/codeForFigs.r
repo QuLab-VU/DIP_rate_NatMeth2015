@@ -312,7 +312,8 @@ makeFig2c	<-	function(toFile=FALSE)
 	}
 	ctrl.lm.coef	<-	coef(lm(nl2 ~ Time_h, data=DS345_3erl[DS345_3erl$Subline=='PC9',]))
 	curve(x*ctrl.lm.coef[2]+ctrl.lm.coef[1], from=0, to=140, lwd=4, add=TRUE)
-	legend('topleft', legend=c('PC9','DS4+erl','DS5+erl','DS3+erl'), col=c('black','red','orange','green'), lwd=4, bty='n', cex=0.66)
+	legend('topleft', legend=c('PC9 parental','DS4 + 3µM erl','DS5 + 3µM erl','DS3 + 3µM erl'), 
+		col=c('black','red','orange','green'), lwd=4, bty='n', cex=0.5)
 	
 	plot(1,1, ylim=c(-0.25, 1), xlim=c(1e-9,1e-5),log='x', type='n', xlab=NA, ylab=NA, axes=FALSE, frame.plot=FALSE)
 	axis(side=1, at=10^(-9:-5), labels=(-9:-5), padj=-0.5)
@@ -768,8 +769,8 @@ makeDRC	<-	function(mydrm=allDRM[c('DS3','DS4','DS5','PC9')], toFile=FALSE, w=8,
 findDIPgraphs	<-	function(dat=ds.data, toFile=FALSE, met='ar2',...)
 {
 	m <- list()
-	if(!toFile)	dev.new(width=7, height=9)
-	if(toFile)	pdf(file='findDIPrate.pdf', width=7, height=9)
+	if(!toFile)	dev.new(width=6, height=6)
+	if(toFile)	pdf(file='findDIPrate.pdf', width=6, height=6)
 	par(mfrow=c(3,3), oma=c(0,1,0,0), mar=c(4,4,1,0.5))
 	for(sl in unique(dat$Subline))
 	{
