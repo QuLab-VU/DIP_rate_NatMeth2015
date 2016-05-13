@@ -1,4 +1,5 @@
 ##**Code for Harris et al., Nature Methods 2016**
+[doi:10.1038/nmeth.3852](http://dx.doi.org/10.1038/nmeth.3852)
 
 All R code in this repository was written by _Darren Tyson_. All Python code was written by _Leonard Harris_.
 
