@@ -1,4 +1,4 @@
-##**Code for Harris et al., Nature Methods 2016**
+## **Code for Harris et al., Nature Methods 2016**
 [doi:10.1038/nmeth.3852](http://dx.doi.org/10.1038/nmeth.3852)
 
 All R code in this repository was written by _Darren Tyson_. All Python code was written by _Leonard Harris_.
@@ -9,7 +9,7 @@ All experimental data needed to produce the figures is provided in the `data_for
 Standalone software for DIP rate estimation from experimental data is provided in the `dipDRC` directory.
 An R script that runs an example application of the `dipDRC.r` code is provided in the `example_dipDRC` directory.
 
-###**Instructions for running the R code**
+### **Instructions for running the R code**
 
 The R statistical software package can be obtained free of charge from [www.R-project.org](http://www.R-project.org).
 
@@ -33,7 +33,7 @@ by copying all the code shown in:
 
 ([https://github.com/QuLab-VU/DIP_rate_NatMeth2016/blob/master/example_dipDRC/makeDRCexample.r](https://github.com/QuLab-VU/DIP_rate_NatMeth2016/blob/master/example_dipDRC/makeDRCexample.r))
 
-####*NOTE that running this code will download and install a number of R libraries automatically*
+#### *NOTE that running this code will download and install a number of R libraries automatically*
 
 Alternatively, the code can be run from a local version using a similar format as for generting the manuscript figures:
 ```
@@ -56,7 +56,7 @@ seven-column matrix with the following headers:
 6) `well`
 7) `expt.date`
 
-###**Instructions for running the Python code**
+### **Instructions for running the Python code**
 
 The Python code for generating Supplementary Figure 7 ("Theoretical effects of variations around a mean cell seeding
 density") is in the file `makeSuppFig7.py` within the `code_for_figs/Python` directory. Running the code requires installing `pysb`, 
